@@ -13,6 +13,7 @@ import {
   kameletToTile,
 } from './camel-to-tile.adapter';
 
+// dummy test
 describe('camel-to-tile.adapter', () => {
   describe('camelComponentToTile', () => {
     it('should return a tile with the correct type', async () => {
