@@ -1,0 +1,45 @@
+name: 🏷️ Release UI — publish NPM package
+
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        type: string
+        description: The release tag / version (e.g. 2.13.0)
+        required: true
+
+jobs:
+  npm-release:
+    permissions:
+      id-token: write  # Required for OIDC
+      contents: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: '🛰️ Checkout source code'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: '🔧 Setup tools and sync versions'
+        uses: ./.github/actions/kaoto-setup-release
+        with:
+          release-tag: ${{ inputs.release_tag }}
+
+      - name: '🔧 Setup Node registry for publishing'
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@kaoto'
+
+      - name: '🔧 Build @kaoto/kaoto package in lib mode'
+        run: yarn workspace @kaoto/kaoto run build:lib
+
+      - name: '📤 Version and publish'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          yarn publish
