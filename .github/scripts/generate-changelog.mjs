@@ -182,19 +182,60 @@ function resolvePackages(scope) {
   return matched.size > 0 ? [...matched] : [FALLBACK_PACKAGE.name];
 }
 
+/** Base URL for repository links on GitHub */
+const REPO_URL = 'https://github.com/KaotoIO/kaoto';
+
+/**
+ * Extract issue/PR references from the subject or commit body, or link the commit hash.
+ * - Auto-links bare #123 / (#123) in the subject
+ * - Parses footer references like "Fixes #123", "Closes #123", "Relates to #123", "Fixes: #123"
+ * - Converts raw commit hash into a link to github.com/KaotoIO/kaoto/commit/<hash>
+ */
+function extractIssueLinks(subject, body) {
+  const links = new Set();
+  const fullText = `${subject}\n${body}`;
+
+  // Match keyword issue references: (fixes|closes|resolves|relates to):? #123 or https://github.com/.../issues/123
+  const keywordRegex = /\b(?:fixes|closes|resolves|relates to|issue|fix|close|resolve):?\s+(?:https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/(?:issues|pull)\/(\d+)|#(\d+))/gi;
+  let match;
+  while ((match = keywordRegex.exec(fullText)) !== null) {
+    const issueNum = match[1] || match[2];
+    if (issueNum) {
+      links.add(`[#${issueNum}](${REPO_URL}/issues/${issueNum})`);
+    }
+  }
+
+  // Also match trailing (#123) or #123 in the subject if not already captured
+  const subjectIssueRegex = /(?:^|\s|\()#(\d+)(?:\)|\b)/g;
+  while ((match = subjectIssueRegex.exec(subject)) !== null) {
+    const issueNum = match[1];
+    if (issueNum) {
+      links.add(`[#${issueNum}](${REPO_URL}/issues/${issueNum})`);
+    }
+  }
+
+  return [...links];
+}
+
 /** Format a single commit as a Markdown bullet. */
-function formatBullet(description, isBreaking, hash) {
+function formatBullet(description, isBreaking, hash, body = '') {
   const short = hash.slice(0, 7);
+  const commitLink = `[\`${short}\`](${REPO_URL}/commit/${hash})`;
   const prefix = isBreaking ? '⚠️ **BREAKING CHANGE** ' : '';
-  return `- ${prefix}${description} (\`${short}\`)`;
+
+  const issueLinks = extractIssueLinks(description, body);
+  const linksSuffix = issueLinks.length > 0 ? ` (${issueLinks.join(', ')})` : '';
+
+  return `- ${prefix}${description}${linksSuffix} (${commitLink})`;
 }
 
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
-const prevTag = getPreviousTag();
-const range = prevTag ? `${prevTag}..HEAD` : 'HEAD';
+const customRange = process.argv[2];
+const prevTag = customRange ? null : getPreviousTag();
+const range = customRange || (prevTag ? `${prevTag}..HEAD` : 'HEAD');
 
 console.error(`Generating changelog for range: ${range}`); // status to stderr
 
@@ -246,14 +287,14 @@ for (const raw of rawCommits) {
   }
 
   // Resolve display header from category key
-  const categoryHeader =
-    categoryKey === '__other__'
-      ? '🔀 Other'
-      : categoryKey === '__deps__'
-        ? '📦 Dependencies'
-        : categoryKey;
+  let categoryHeader = categoryKey;
+  if (categoryKey === '__other__') {
+    categoryHeader = '🔀 Other';
+  } else if (categoryKey === '__deps__') {
+    categoryHeader = '📦 Dependencies';
+  }
 
-  const bullet = formatBullet(description, breaking, hash);
+  const bullet = formatBullet(description, breaking, hash, body);
 
   for (const pkgName of resolvePackages(scope)) {
     const pkgSection = sections.get(pkgName);
