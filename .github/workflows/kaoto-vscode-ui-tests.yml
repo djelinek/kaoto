@@ -56,6 +56,7 @@ jobs:
         env:
           KAOTO_DISABLE_WHATS_NEW: 'true'
           TEST_RESOURCES: ${{ runner.temp }}/kaoto-tests
+          CODE_VERSION: max # Latest stable VS Code version supported by ExTester UI testing framework
           VSIX_FILE: ${{ inputs.vsix-file }}
         run: |
           if [ "$RUNNER_OS" = Linux ]; then
@@ -102,6 +103,7 @@ jobs:
         env:
           KAOTO_DISABLE_WHATS_NEW: 'true'
           TEST_RESOURCES: ${{ runner.temp }}/kaoto-tests
+          CODE_VERSION: max # Latest stable VS Code version supported by ExTester UI testing framework
           VSIX_FILE: ${{ inputs.vsix-file }}
         run: |
           if [ "$RUNNER_OS" = Linux ]; then
@@ -149,6 +151,7 @@ jobs:
         env:
           KAOTO_DISABLE_WHATS_NEW: 'true'
           TEST_RESOURCES: ${{ runner.temp }}/kaoto-tests
+          CODE_VERSION: max # Latest stable VS Code version supported by ExTester UI testing framework
           VSIX_FILE: ${{ inputs.vsix-file }}
         run: |
           if [ "$RUNNER_OS" = Linux ]; then
@@ -196,6 +199,7 @@ jobs:
         env:
           KAOTO_DISABLE_WHATS_NEW: 'true'
           TEST_RESOURCES: ${{ runner.temp }}/kaoto-tests
+          CODE_VERSION: max # Latest stable VS Code version supported by ExTester UI testing framework
           VSIX_FILE: ${{ inputs.vsix-file }}
         run: |
           if [ "$RUNNER_OS" = Linux ]; then
@@ -235,6 +239,7 @@ jobs:
         env:
           KAOTO_DISABLE_WHATS_NEW: 'true'
           TEST_RESOURCES: ${{ runner.temp }}/kaoto-tests
+          CODE_VERSION: max # Latest stable VS Code version supported by ExTester UI testing framework
           VSIX_FILE: ${{ inputs.vsix-file }}
         run: |
           eval "$(minikube -p minikube docker-env)"
