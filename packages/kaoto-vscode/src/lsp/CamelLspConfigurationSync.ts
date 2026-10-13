@@ -120,20 +120,24 @@ export class CamelLspConfigurationSync {
 	 * Build the camel.* settings object from a catalog entry.
 	 * This is the format the Camel LSP server expects.
 	 *
-	 * The LSP server expects:
-	 * - 'Camel catalog version': a plain Camel version string, e.g. '4.22.1' or '3.20.1.redhat-00026'
-	 *   (NOT the Kaoto display label like 'Camel Main 4.22.1')
-	 * - 'Camel catalog runtime provider': one of 'DEFAULT', 'SPRINGBOOT', 'QUARKUS'
+	 * The LSP server supports two settings:
+	 * - 'Camel catalog version': triggers a Maven download of camel-catalog via MavenVersionManager.
+	 *   This requires MIMA runtime on the server classpath — which fails in the 1.35.0 Spring Boot
+	 *   uber JAR (ServiceLoader cannot find the MIMA Runtime implementation in BOOT-INF/lib/).
+	 *   See CamelTextDocumentService.updateCatalogVersion() — any non-empty version triggers the
+	 *   MavenVersionManager constructor, which crashes with "No Runtime implementation found".
+	 *   We intentionally omit this setting so the server uses its built-in default catalog.
 	 *
-	 * We use catalog.camelCatalogVersion which is the actual camel-catalog artifact version,
-	 * falling back to catalog.version if camelCatalogVersion is not set.
+	 * - 'Camel catalog runtime provider': one of 'DEFAULT', 'SPRINGBOOT', 'QUARKUS'.
+	 *   This switches the in-memory RuntimeProvider without any Maven download — safe to send.
+	 *
+	 * TODO: Re-enable catalog version sync once the camel-lsp-server JAR properly bundles the
+	 * MIMA runtime, or once the server supports a version-update path that doesn't require Maven.
 	 */
 	static buildCamelSettingsFromCatalog(catalog: CatalogLibraryEntry | undefined): Record<string, unknown> {
 		const camelSettings: Record<string, unknown> = {};
 
 		if (catalog) {
-			const catalogVersion = catalog.camelCatalogVersion || catalog.version;
-			camelSettings['Camel catalog version'] = catalogVersion;
 			camelSettings['Camel catalog runtime provider'] = CamelLspConfigurationSync.mapRuntimeToLspProvider(catalog.runtime);
 		}
 
