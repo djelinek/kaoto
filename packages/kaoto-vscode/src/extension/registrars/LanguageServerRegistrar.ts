@@ -24,6 +24,7 @@ import { IRegistrar } from './IRegistrar';
 export class LanguageServerRegistrar implements IRegistrar {
 	private lspManager: CamelLanguageServerManager | undefined;
 	private configSync: CamelLspConfigurationSync | undefined;
+	private configListenerDisposable: vscode.Disposable | undefined;
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -75,7 +76,9 @@ export class LanguageServerRegistrar implements IRegistrar {
 		// Register config change listeners after successful start
 		const client = this.lspManager.getClient();
 		if (client && this.lspManager.isRunning()) {
-			this.configSync.registerListeners(this.context, client);
+			// Dispose previous config listener to avoid accumulation on toggle cycles
+			this.configListenerDisposable?.dispose();
+			this.configListenerDisposable = this.configSync.registerListeners(this.context, client);
 		}
 	}
 
@@ -83,6 +86,8 @@ export class LanguageServerRegistrar implements IRegistrar {
 	 * Stop the language server. Called from extension.ts deactivate().
 	 */
 	async stop(): Promise<void> {
+		this.configListenerDisposable?.dispose();
+		this.configListenerDisposable = undefined;
 		if (this.lspManager) {
 			await this.lspManager.stop();
 		}

@@ -75,24 +75,28 @@ export class CamelLspConfigurationSync {
 
 	/**
 	 * Register VS Code configuration change listeners that auto-push settings.
+	 *
+	 * Returns the Disposable for the registered listener so callers can dispose it
+	 * explicitly (e.g. when the LSP is restarted) in addition to the automatic cleanup
+	 * via context.subscriptions on extension deactivation.
 	 */
-	registerListeners(context: vscode.ExtensionContext, client: LanguageClient): void {
-		context.subscriptions.push(
-			vscode.workspace.onDidChangeConfiguration(async (event) => {
-				const affectsLsp =
-					event.affectsConfiguration(KAOTO_RUNTIME_CATALOG_NAME_SETTING_ID) ||
-					event.affectsConfiguration(KAOTO_TESTING_CATALOG_NAME_SETTING_ID) ||
-					event.affectsConfiguration(KAOTO_CATALOG_URL_SETTING_ID) ||
-					event.affectsConfiguration(KAOTO_LSP_EXTRA_COMPONENTS_SETTING_ID) ||
-					event.affectsConfiguration(KAOTO_LSP_YAML_SCHEMA_SETTING_ID) ||
-					event.affectsConfiguration(KAOTO_LSP_XML_SCHEMA_SETTING_ID);
+	registerListeners(context: vscode.ExtensionContext, client: LanguageClient): vscode.Disposable {
+		const disposable = vscode.workspace.onDidChangeConfiguration(async (event) => {
+			const affectsLsp =
+				event.affectsConfiguration(KAOTO_RUNTIME_CATALOG_NAME_SETTING_ID) ||
+				event.affectsConfiguration(KAOTO_TESTING_CATALOG_NAME_SETTING_ID) ||
+				event.affectsConfiguration(KAOTO_CATALOG_URL_SETTING_ID) ||
+				event.affectsConfiguration(KAOTO_LSP_EXTRA_COMPONENTS_SETTING_ID) ||
+				event.affectsConfiguration(KAOTO_LSP_YAML_SCHEMA_SETTING_ID) ||
+				event.affectsConfiguration(KAOTO_LSP_XML_SCHEMA_SETTING_ID);
 
-				if (affectsLsp) {
-					KaotoOutputChannel.logInfo('LSP-relevant configuration changed, pushing updated settings.');
-					await this.pushSettingsToClient(client);
-				}
-			}),
-		);
+			if (affectsLsp) {
+				KaotoOutputChannel.logInfo('LSP-relevant configuration changed, pushing updated settings.');
+				await this.pushSettingsToClient(client);
+			}
+		});
+		context.subscriptions.push(disposable);
+		return disposable;
 	}
 
 	/**
