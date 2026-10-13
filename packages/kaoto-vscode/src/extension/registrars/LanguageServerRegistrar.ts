@@ -31,22 +31,12 @@ export class LanguageServerRegistrar implements IRegistrar {
 	) {}
 
 	async register(): Promise<void> {
-		const isEnabled = vscode.workspace.getConfiguration().get<boolean>(KAOTO_LSP_ENABLED_SETTING_ID, true);
-
-		if (!isEnabled) {
-			KaotoOutputChannel.logInfo('Camel Language Server is disabled via kaoto.lsp.enabled setting.');
-			return;
-		}
-
 		this.configSync = new CamelLspConfigurationSync(this.catalogService);
 		this.lspManager = new CamelLanguageServerManager(this.context);
 
-		// Start LSP in background — do not block extension activation
-		this.startLsp().catch((error) => {
-			KaotoOutputChannel.logError('Background LSP startup failed', error);
-		});
-
-		// Listen for enable/disable toggle
+		// Register enable/disable toggle listener unconditionally — this must happen before the
+		// early return below so that re-enabling at runtime also works when the LSP was disabled
+		// at activation time (otherwise no listener would exist to catch the change).
 		this.context.subscriptions.push(
 			vscode.workspace.onDidChangeConfiguration(async (event) => {
 				if (event.affectsConfiguration(KAOTO_LSP_ENABLED_SETTING_ID)) {
@@ -61,6 +51,17 @@ export class LanguageServerRegistrar implements IRegistrar {
 				}
 			}),
 		);
+
+		const isEnabled = vscode.workspace.getConfiguration().get<boolean>(KAOTO_LSP_ENABLED_SETTING_ID, true);
+		if (!isEnabled) {
+			KaotoOutputChannel.logInfo('Camel Language Server is disabled via kaoto.lsp.enabled setting.');
+			return;
+		}
+
+		// Start LSP in background — do not block extension activation
+		this.startLsp().catch((error) => {
+			KaotoOutputChannel.logError('Background LSP startup failed', error);
+		});
 	}
 
 	private async startLsp(): Promise<void> {
