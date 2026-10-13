@@ -19,6 +19,7 @@
     "build:test:ui": "rimraf ./out && tsc --project tsconfig.ui-tests.json --skipLibCheck --sourceMap true",
     "build:test:unit": "rimraf ./out && tsc --project tsconfig.unit-tests.json --skipLibCheck --sourceMap true",
     "build:vsix": "yarn vsce package --no-dependencies --yarn",
+    "postinstall": "node ./scripts/download-camel-lsp.js",
     "compile": "webpack",
     "sbom:generate": "cdxgen -o manifest.json",
     "watch": "webpack --env dev",
@@ -51,6 +52,7 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "valid-filename": "5.0.0",
+    "vscode-languageclient": "^10.0.0",
     "wait-on": "^9.1.0",
     "yaml": "^2.9.0"
   },
@@ -83,6 +85,7 @@
     "eslint-plugin-simple-import-sort": "^14.0.0",
     "fs-extra": "^11.4.0",
     "mocha": "^11.8.0",
+    "mvn-artifact-download": "^6.1.2",
     "node-fetch": "2",
     "os-browserify": "^0.3.0",
     "ovsx": "^1.1.1",
@@ -1398,6 +1401,46 @@
             "tags": [
               "experimental"
             ]
+          }
+        }
+      },
+      {
+        "id": "languageServer",
+        "title": "Language Server",
+        "properties": {
+          "kaoto.lsp.enabled": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Enable Camel Language Server for source code features (completion, validation, hover). Requires Java 17+ on the system PATH or JAVA_HOME.",
+            "scope": "window",
+            "order": 0
+          },
+          "kaoto.lsp.yamlSchema": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "markdownDescription": "Custom YAML schema associations. Keys are glob patterns, values are schema file paths or URLs.\n\nExample:\n```json\n{ \"**/custom-routes/*.yaml\": \"./schemas/my-camel-schema.json\" }\n```",
+            "default": null,
+            "scope": "window",
+            "order": 1
+          },
+          "kaoto.lsp.xmlSchema": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "markdownDescription": "Custom XML schema associations. Keys are glob patterns, values are schema file paths or URLs.",
+            "default": null,
+            "scope": "window",
+            "order": 2
+          },
+          "kaoto.lsp.extraComponents": {
+            "type": "array",
+            "markdownDescription": "(Experimental) List of additional Camel components to include in the catalog, described as a JSON list respecting Camel catalog syntax.",
+            "default": null,
+            "scope": "window",
+            "order": 3
           }
         }
       }
