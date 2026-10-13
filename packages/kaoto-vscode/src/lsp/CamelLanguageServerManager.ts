@@ -36,6 +36,7 @@ export class CamelLanguageServerManager {
 
 	private languageClient: LanguageClient | undefined;
 	private statusBarItem: vscode.StatusBarItem | undefined;
+	private fileWatchers: vscode.FileSystemWatcher[] = [];
 
 	constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -72,20 +73,22 @@ export class CamelLanguageServerManager {
 			args: ['-jar', jarPath],
 		};
 
+		this.fileWatchers = CAMEL_LSP_FILE_WATCHER_GLOBS.map((glob) => vscode.workspace.createFileSystemWatcher(glob));
+
 		const clientOptions: LanguageClientOptions = {
 			documentSelector: CAMEL_LSP_DOCUMENT_SELECTORS,
 			synchronize: {
 				configurationSection: ['camel'],
-				fileEvents: CAMEL_LSP_FILE_WATCHER_GLOBS.map((glob) => vscode.workspace.createFileSystemWatcher(glob)),
+				fileEvents: this.fileWatchers,
 			},
 			initializationOptions: initializationOptions ? { settings: initializationOptions } : undefined,
 			middleware: {
 				workspace: {
 					didChangeConfiguration: async () => {
-						// Configuration changes are handled by CamelLspConfigurationSync.
-						// This middleware prevents the default vscode-languageclient behavior
-						// of sending the raw VS Code configuration (which uses kaoto.* keys,
-						// not the camel.* keys the LSP server expects).
+						// Suppress the default vscode-languageclient behavior which reads
+						// the (non-existent) 'camel' VS Code configuration section and
+						// would send an empty/stale settings object, overwriting the
+						// catalog-derived settings pushed by CamelLspConfigurationSync.
 					},
 				},
 			},
@@ -116,6 +119,10 @@ export class CamelLanguageServerManager {
 			}
 			this.languageClient = undefined;
 		}
+		for (const watcher of this.fileWatchers) {
+			watcher.dispose();
+		}
+		this.fileWatchers = [];
 		this.statusBarItem?.dispose();
 		this.statusBarItem = undefined;
 	}
