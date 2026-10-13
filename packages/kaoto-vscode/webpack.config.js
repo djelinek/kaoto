@@ -130,6 +130,11 @@ const commonConfig = (env) => {
             from: path.resolve(require.resolve('@kaoto/camel-catalog/package.json'), '../dist/camel-catalog'),
             to: 'webview/editors/kaoto/camel-catalog',
           },
+          {
+            from: path.resolve(__dirname, 'jars'),
+            to: 'jars',
+            noErrorOnMissing: true,
+          },
         ],
       }),
     ],
