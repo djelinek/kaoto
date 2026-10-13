@@ -45,6 +45,22 @@ export class LanguageServerRegistrar implements IRegistrar {
 		this.startLsp().catch((error) => {
 			KaotoOutputChannel.logError('Background LSP startup failed', error);
 		});
+
+		// Listen for enable/disable toggle
+		this.context.subscriptions.push(
+			vscode.workspace.onDidChangeConfiguration(async (event) => {
+				if (event.affectsConfiguration(KAOTO_LSP_ENABLED_SETTING_ID)) {
+					const isNowEnabled = vscode.workspace.getConfiguration().get<boolean>(KAOTO_LSP_ENABLED_SETTING_ID, true);
+					if (isNowEnabled && !this.lspManager?.isRunning()) {
+						KaotoOutputChannel.logInfo('Camel Language Server re-enabled, starting...');
+						await this.startLsp();
+					} else if (!isNowEnabled && this.lspManager?.isRunning()) {
+						KaotoOutputChannel.logInfo('Camel Language Server disabled, stopping...');
+						await this.lspManager.stop();
+					}
+				}
+			}),
+		);
 	}
 
 	private async startLsp(): Promise<void> {

@@ -19,7 +19,7 @@ import * as fs from 'fs'; // NOSONAR
 import { execFile } from 'child_process';
 import { Executable, LanguageClient, LanguageClientOptions } from 'vscode-languageclient/node';
 import { KaotoOutputChannel } from '../extension/KaotoOutputChannel';
-import { CAMEL_LSP_DOCUMENT_SELECTORS } from './CamelLspDocumentFilter';
+import { CAMEL_LSP_DOCUMENT_SELECTORS, CAMEL_LSP_FILE_WATCHER_GLOBS } from './CamelLspDocumentFilter';
 
 const LANGUAGE_CLIENT_ID = 'LANGUAGE_ID_APACHE_CAMEL_KAOTO';
 const LANGUAGE_CLIENT_NAME = 'Camel Language Server (Kaoto)';
@@ -76,8 +76,19 @@ export class CamelLanguageServerManager {
 			documentSelector: CAMEL_LSP_DOCUMENT_SELECTORS,
 			synchronize: {
 				configurationSection: ['camel'],
+				fileEvents: CAMEL_LSP_FILE_WATCHER_GLOBS.map((glob) => vscode.workspace.createFileSystemWatcher(glob)),
 			},
 			initializationOptions: initializationOptions ? { settings: initializationOptions } : undefined,
+			middleware: {
+				workspace: {
+					didChangeConfiguration: async () => {
+						// Configuration changes are handled by CamelLspConfigurationSync.
+						// This middleware prevents the default vscode-languageclient behavior
+						// of sending the raw VS Code configuration (which uses kaoto.* keys,
+						// not the camel.* keys the LSP server expects).
+					},
+				},
+			},
 		};
 
 		this.languageClient = new LanguageClient(LANGUAGE_CLIENT_ID, LANGUAGE_CLIENT_NAME, serverOptions, clientOptions);
