@@ -119,6 +119,14 @@ export class CamelLspConfigurationSync {
 	/**
 	 * Build the camel.* settings object from a catalog entry.
 	 * This is the format the Camel LSP server expects.
+	 *
+	 * The LSP server expects:
+	 * - 'Camel catalog version': a plain Camel version string, e.g. '4.22.1' or '3.20.1.redhat-00026'
+	 *   (NOT the Kaoto display label like 'Camel Main 4.22.1')
+	 * - 'Camel catalog runtime provider': one of 'DEFAULT', 'SPRINGBOOT', 'QUARKUS'
+	 *
+	 * We use catalog.camelCatalogVersion which is the actual camel-catalog artifact version,
+	 * falling back to catalog.version if camelCatalogVersion is not set.
 	 */
 	static buildCamelSettingsFromCatalog(catalog: CatalogLibraryEntry | undefined): Record<string, unknown> {
 		const camelSettings: Record<string, unknown> = {};
