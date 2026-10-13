@@ -16,18 +16,18 @@
 import * as vscode from 'vscode';
 import { KAOTO_LSP_ENABLED_SETTING_ID } from '../../constants';
 import { CamelLanguageServerManager } from '../../lsp/CamelLanguageServerManager';
+import { CamelLspConfigurationSync } from '../../lsp/CamelLspConfigurationSync';
 import { KaotoOutputChannel } from '../KaotoOutputChannel';
 import { KaotoCatalogService } from '../../services/KaotoCatalogService';
 import { IRegistrar } from './IRegistrar';
 
 export class LanguageServerRegistrar implements IRegistrar {
 	private lspManager: CamelLanguageServerManager | undefined;
+	private configSync: CamelLspConfigurationSync | undefined;
 
-	// `_catalogService` is accepted here (but not yet read) so that the constructor signature
-	// already matches what the upcoming catalog <-> LSP settings sync wiring will need to consume.
 	constructor(
 		private readonly context: vscode.ExtensionContext,
-		_catalogService: KaotoCatalogService,
+		private readonly catalogService: KaotoCatalogService,
 	) {}
 
 	async register(): Promise<void> {
@@ -38,6 +38,7 @@ export class LanguageServerRegistrar implements IRegistrar {
 			return;
 		}
 
+		this.configSync = new CamelLspConfigurationSync(this.catalogService);
 		this.lspManager = new CamelLanguageServerManager(this.context);
 
 		// Start LSP in background — do not block extension activation
@@ -47,11 +48,18 @@ export class LanguageServerRegistrar implements IRegistrar {
 	}
 
 	private async startLsp(): Promise<void> {
-		if (!this.lspManager) {
+		if (!this.lspManager || !this.configSync) {
 			return;
 		}
 
-		await this.lspManager.start();
+		const initialSettings = await this.configSync.getInitialSettings();
+		await this.lspManager.start(initialSettings);
+
+		// Register config change listeners after successful start
+		const client = this.lspManager.getClient();
+		if (client && this.lspManager.isRunning()) {
+			this.configSync.registerListeners(this.context, client);
+		}
 	}
 
 	/**
@@ -64,7 +72,7 @@ export class LanguageServerRegistrar implements IRegistrar {
 	}
 
 	/**
-	 * Get the underlying LSP manager (for catalog sync wiring in Task 3).
+	 * Get the underlying LSP manager.
 	 */
 	getLspManager(): CamelLanguageServerManager | undefined {
 		return this.lspManager;
