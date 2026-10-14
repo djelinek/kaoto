@@ -18,6 +18,7 @@ import * as path from 'path'; // NOSONAR
 import * as fs from 'fs'; // NOSONAR
 import { KaotoCatalogService } from '../services/KaotoCatalogService';
 import { KaotoOutputChannel } from '../extension/KaotoOutputChannel';
+import { KAOTO_RUNTIME_CATALOG_NAME_SETTING_ID, KAOTO_CATALOG_URL_SETTING_ID } from '../constants';
 
 const CONTRIBUTOR_ID = 'kaoto-camel-yaml';
 
@@ -78,6 +79,22 @@ export class CamelYamlSchemaManager {
 		} catch (error) {
 			KaotoOutputChannel.logError('Failed to register YAML schema contributor', error);
 		}
+	}
+
+	/**
+	 * Register listeners that reload the schema cache when the catalog changes.
+	 * Only updates the in-memory cache — no workspace settings writes, so no
+	 * interference with the catalog service's "Reopen editor" notification.
+	 */
+	registerListeners(context: vscode.ExtensionContext, catalogService: KaotoCatalogService): void {
+		context.subscriptions.push(
+			vscode.workspace.onDidChangeConfiguration(async (event) => {
+				if (event.affectsConfiguration(KAOTO_RUNTIME_CATALOG_NAME_SETTING_ID) || event.affectsConfiguration(KAOTO_CATALOG_URL_SETTING_ID)) {
+					this.schemaCache.clear();
+					await this.loadSchemaCache(catalogService);
+				}
+			}),
+		);
 	}
 
 	/**
