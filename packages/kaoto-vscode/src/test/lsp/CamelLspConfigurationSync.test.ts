@@ -48,7 +48,7 @@ suite('CamelLspConfigurationSync', () => {
 	});
 
 	suite('buildCamelSettingsFromCatalog', () => {
-		test('should send runtime provider DEFAULT for Main catalog', () => {
+		test('should send plain version and runtime provider for Main catalog', () => {
 			const catalog = {
 				name: 'Camel Main 4.22.1',
 				version: '4.22.1',
@@ -64,10 +64,11 @@ suite('CamelLspConfigurationSync', () => {
 			expect(settings).to.have.property('camel');
 
 			const camelSettings = settings['camel'] as Record<string, unknown>;
+			expect(camelSettings['Camel catalog version']).to.equal('4.22.1');
 			expect(camelSettings['Camel catalog runtime provider']).to.equal('DEFAULT');
 		});
 
-		test('should send runtime provider QUARKUS for Quarkus catalog', () => {
+		test('should use camelCatalogVersion (Camel version) for Quarkus, not Quarkus version', () => {
 			const catalog = {
 				name: 'Camel Quarkus 3.35.0',
 				version: '3.35.0',
@@ -81,16 +82,17 @@ suite('CamelLspConfigurationSync', () => {
 
 			const settings = CamelLspConfigurationSync.buildCamelSettingsFromCatalog(catalog);
 			const camelSettings = settings['camel'] as Record<string, unknown>;
+			expect(camelSettings['Camel catalog version']).to.equal('4.14.7');
 			expect(camelSettings['Camel catalog runtime provider']).to.equal('QUARKUS');
 		});
 
-		test('should NOT send Camel catalog version (MIMA runtime bug in server JAR)', () => {
+		test('should fall back to version when camelCatalogVersion is empty', () => {
 			const catalog = {
 				name: 'Camel Main 4.22.1',
 				version: '4.22.1',
 				runtime: 'Main',
 				fileName: 'camel-main/4.22.1/index.json',
-				camelCatalogVersion: '4.22.1',
+				camelCatalogVersion: '',
 				executorVersion: '4.22.1',
 				runtimeProviderVersion: '',
 				frameworkVersion: '',
@@ -98,7 +100,25 @@ suite('CamelLspConfigurationSync', () => {
 
 			const settings = CamelLspConfigurationSync.buildCamelSettingsFromCatalog(catalog);
 			const camelSettings = settings['camel'] as Record<string, unknown>;
-			expect(camelSettings['Camel catalog version']).to.be.undefined;
+			expect(camelSettings['Camel catalog version']).to.equal('4.22.1');
+		});
+
+		test('should handle RedHat versioned catalog', () => {
+			const catalog = {
+				name: 'Camel Main 4.18.1.redhat-00019',
+				version: '4.18.1.redhat-00019',
+				runtime: 'Main',
+				fileName: 'camel-main/4.18.1.redhat-00019/index.json',
+				camelCatalogVersion: '4.18.1.redhat-00019',
+				executorVersion: '4.18.1.redhat-00016',
+				runtimeProviderVersion: '',
+				frameworkVersion: '',
+			};
+
+			const settings = CamelLspConfigurationSync.buildCamelSettingsFromCatalog(catalog);
+			const camelSettings = settings['camel'] as Record<string, unknown>;
+			expect(camelSettings['Camel catalog version']).to.equal('4.18.1.redhat-00019');
+			expect(camelSettings['Camel catalog runtime provider']).to.equal('DEFAULT');
 		});
 
 		test('should return empty camel settings for undefined catalog', () => {
