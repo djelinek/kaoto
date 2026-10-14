@@ -67,6 +67,7 @@ export class CamelLanguageServerManager {
 		}
 
 		KaotoOutputChannel.logInfo(`Starting Camel Language Server with Java ${javaVersion} at ${javaExecutable}`);
+		KaotoOutputChannel.logInfo(`Camel LSP server JAR: ${jarPath} (${this.getJarFileSize(jarPath)})`);
 
 		const serverOptions: Executable = {
 			command: javaExecutable,
@@ -99,6 +100,7 @@ export class CamelLanguageServerManager {
 		try {
 			await this.languageClient.start();
 			this.updateStatusBar('running');
+			this.logServerInfo();
 			KaotoOutputChannel.logInfo('Camel Language Server started successfully.');
 		} catch (error) {
 			this.updateStatusBar('error');
@@ -233,6 +235,27 @@ export class CamelLanguageServerManager {
 				this.statusBarItem.tooltip = 'Camel Language Server failed to start';
 				this.statusBarItem.show();
 				break;
+		}
+	}
+
+	private logServerInfo(): void {
+		if (!this.languageClient) {
+			return;
+		}
+		const serverInfo = this.languageClient.initializeResult?.serverInfo;
+		if (serverInfo) {
+			const version = serverInfo.version ? ` v${serverInfo.version}` : '';
+			KaotoOutputChannel.logInfo(`Camel Language Server info: ${serverInfo.name}${version}`);
+		}
+	}
+
+	private getJarFileSize(jarPath: string): string {
+		try {
+			const stats = fs.statSync(jarPath);
+			const sizeMB = (stats.size / (1024 * 1024)).toFixed(1);
+			return `${sizeMB} MB`;
+		} catch {
+			return 'unknown size';
 		}
 	}
 
