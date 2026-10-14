@@ -36,12 +36,9 @@ export class LanguageServerRegistrar implements IRegistrar {
 		this.configSync = new CamelLspConfigurationSync(this.catalogService);
 		this.lspManager = new CamelLanguageServerManager(this.context);
 
-		// Apply YAML schema associations for vscode-yaml (structural validation)
+		// Register YAML schema contributor via vscode-yaml API (no workspace settings write)
 		const schemaManager = new CamelYamlSchemaManager(this.context);
-		schemaManager.applySchemaAssociations(this.catalogService).catch((error) => {
-			KaotoOutputChannel.logError('Failed to apply YAML schema associations', error);
-		});
-		schemaManager.registerListeners(this.catalogService);
+		void schemaManager.registerSchemaContributor(this.catalogService);
 
 		// Register enable/disable toggle listener unconditionally — this must happen before the
 		// early return below so that re-enabling at runtime also works when the LSP was disabled
