@@ -17,6 +17,7 @@ import * as vscode from 'vscode';
 import { KAOTO_LSP_ENABLED_SETTING_ID } from '../../constants';
 import { CamelLanguageServerManager } from '../../lsp/CamelLanguageServerManager';
 import { CamelLspConfigurationSync } from '../../lsp/CamelLspConfigurationSync';
+import { CamelYamlSchemaManager } from '../../lsp/CamelYamlSchemaManager';
 import { KaotoOutputChannel } from '../KaotoOutputChannel';
 import { KaotoCatalogService } from '../../services/KaotoCatalogService';
 import { IRegistrar } from './IRegistrar';
@@ -34,6 +35,13 @@ export class LanguageServerRegistrar implements IRegistrar {
 	async register(): Promise<void> {
 		this.configSync = new CamelLspConfigurationSync(this.catalogService);
 		this.lspManager = new CamelLanguageServerManager(this.context);
+
+		// Apply YAML schema associations for vscode-yaml (structural validation)
+		const schemaManager = new CamelYamlSchemaManager(this.context);
+		schemaManager.applySchemaAssociations(this.catalogService).catch((error) => {
+			KaotoOutputChannel.logError('Failed to apply YAML schema associations', error);
+		});
+		schemaManager.registerListeners(this.catalogService);
 
 		// Register enable/disable toggle listener unconditionally — this must happen before the
 		// early return below so that re-enabling at runtime also works when the LSP was disabled
