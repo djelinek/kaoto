@@ -18,7 +18,7 @@ import * as path from 'path'; // NOSONAR
 import * as fs from 'fs'; // NOSONAR
 import { KaotoCatalogService } from '../services/KaotoCatalogService';
 import { KaotoOutputChannel } from '../extension/KaotoOutputChannel';
-import { KAOTO_RUNTIME_CATALOG_NAME_SETTING_ID, KAOTO_CATALOG_URL_SETTING_ID } from '../constants';
+import { KAOTO_CATALOG_URL_SETTING_ID } from '../constants';
 
 /**
  * File glob patterns for each Camel file type and the schema key they map to.
@@ -97,12 +97,15 @@ export class CamelYamlSchemaManager {
 	}
 
 	/**
-	 * Register listeners that update schema associations when the catalog changes.
+	 * Register listeners that update schema associations when the custom catalog URL changes.
+	 * We intentionally do NOT listen for kaoto.runtimeCatalogName changes here because the
+	 * yaml.schemas workspace config update interferes with KaotoCatalogService's "Reopen editor"
+	 * notification. The YAML DSL schema structure is stable across catalog versions.
 	 */
 	registerListeners(catalogService: KaotoCatalogService): void {
 		this.context.subscriptions.push(
 			vscode.workspace.onDidChangeConfiguration(async (event) => {
-				if (event.affectsConfiguration(KAOTO_RUNTIME_CATALOG_NAME_SETTING_ID) || event.affectsConfiguration(KAOTO_CATALOG_URL_SETTING_ID)) {
+				if (event.affectsConfiguration(KAOTO_CATALOG_URL_SETTING_ID)) {
 					await this.applySchemaAssociations(catalogService);
 				}
 			}),
