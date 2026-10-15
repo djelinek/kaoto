@@ -17,7 +17,6 @@ import * as vscode from 'vscode';
 import { KAOTO_LSP_ENABLED_SETTING_ID } from '../../constants';
 import { CamelLanguageServerManager } from '../../lsp/CamelLanguageServerManager';
 import { CamelLspConfigurationSync } from '../../lsp/CamelLspConfigurationSync';
-import { CamelYamlSchemaManager } from '../../lsp/CamelYamlSchemaManager';
 import { KaotoOutputChannel } from '../KaotoOutputChannel';
 import { KaotoCatalogService } from '../../services/KaotoCatalogService';
 import { IRegistrar } from './IRegistrar';
@@ -36,11 +35,12 @@ export class LanguageServerRegistrar implements IRegistrar {
 		this.configSync = new CamelLspConfigurationSync(this.catalogService);
 		this.lspManager = new CamelLanguageServerManager(this.context);
 
-		// Register YAML schema contributor via vscode-yaml API (no workspace settings write)
-		const schemaManager = new CamelYamlSchemaManager(this.context);
-		void schemaManager.registerSchemaContributor(this.catalogService);
-		void schemaManager.registerXmlSchemaAssociation(this.catalogService);
-		schemaManager.registerListeners(this.context, this.catalogService);
+		// YAML/XML schema associations disabled — the Camel LSP server now provides
+		// comprehensive completions, hover, and diagnostics for all YAML DSL contexts.
+		// Enabling the vscode-yaml schema contributor causes duplicate completion items.
+		// TODO: Add YAML schema validation directly to the Camel LSP server to provide
+		// structural validation (invalid fields, wrong nesting, type checking) without
+		// requiring the vscode-yaml extension.
 
 		// Register enable/disable toggle listener unconditionally — this must happen before the
 		// early return below so that re-enabling at runtime also works when the LSP was disabled
