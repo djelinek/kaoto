@@ -33,12 +33,11 @@ const SCHEMA_MAPPINGS: { pattern: RegExp; schemaKey: string }[] = [
 ];
 
 /**
- * Manages YAML schema associations between Kaoto Camel file patterns and the
- * Camel YAML DSL / CRD JSON schemas bundled in the catalog.
+ * Manages YAML and XML schema associations between Kaoto Camel file patterns
+ * and the bundled catalog schemas.
  *
- * Uses the redhat.vscode-yaml extension's programmatic schema contributor API
- * instead of writing to yaml.schemas workspace settings (which interferes with
- * VS Code's active editor tracking and the catalog service's notifications).
+ * YAML: Uses the redhat.vscode-yaml extension's programmatic schema contributor API.
+ * XML: Associates the bundled camel-xml-io XSD with *.camel.xml files via redhat.vscode-xml.
  */
 export class CamelYamlSchemaManager {
 	private readonly catalogBasePath: string;
@@ -77,6 +76,62 @@ export class CamelYamlSchemaManager {
 			}
 		} catch (error) {
 			KaotoOutputChannel.logError('Failed to register YAML schema contributor', error);
+		}
+	}
+
+	/**
+	 * Associate the bundled camel-xml-io XSD schema with *.camel.xml files
+	 * via the redhat.vscode-xml extension's xml.fileAssociations setting.
+	 */
+	async registerXmlSchemaAssociation(catalogService: KaotoCatalogService): Promise<void> {
+		const catalog = await catalogService.getSelectedIntegrationCatalog();
+		if (!catalog) {
+			return;
+		}
+
+		const catalogIndexPath = path.join(this.catalogBasePath, catalog.fileName);
+		if (!fs.existsSync(catalogIndexPath)) {
+			return;
+		}
+
+		try {
+			const indexContent = await fs.promises.readFile(catalogIndexPath, 'utf-8');
+			const catalogIndex = JSON.parse(indexContent);
+			const schemas = catalogIndex.schemas as Record<string, { file: string }> | undefined;
+			const xmlSchemaInfo = schemas?.['camel-xml-io'];
+
+			if (!xmlSchemaInfo?.file) {
+				KaotoOutputChannel.logInfo('No camel-xml-io XSD found in catalog, skipping XML schema association.');
+				return;
+			}
+
+			const xsdPath = path.join(path.dirname(catalogIndexPath), xmlSchemaInfo.file);
+			if (!fs.existsSync(xsdPath)) {
+				return;
+			}
+
+			const xmlExtension = vscode.extensions.getExtension('redhat.vscode-xml');
+			if (!xmlExtension) {
+				KaotoOutputChannel.logInfo('XML extension (redhat.vscode-xml) not installed, skipping XML schema association.');
+				return;
+			}
+
+			// Use xml.fileAssociations to associate the XSD with *.camel.xml
+			const config = vscode.workspace.getConfiguration('xml');
+			const existing = config.get<Array<{ pattern: string; systemId: string }>>('fileAssociations') ?? [];
+
+			// Remove previous Kaoto-managed associations
+			const filtered = existing.filter((a) => !a.systemId.includes('camel-catalog'));
+
+			filtered.push({
+				pattern: '**/*.camel.xml',
+				systemId: vscode.Uri.file(xsdPath).toString(),
+			});
+
+			await config.update('fileAssociations', filtered, vscode.ConfigurationTarget.Workspace);
+			KaotoOutputChannel.logInfo(`XML schema associated: *.camel.xml → ${xsdPath}`);
+		} catch (error) {
+			KaotoOutputChannel.logError('Failed to register XML schema association', error);
 		}
 	}
 

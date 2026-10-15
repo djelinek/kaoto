@@ -39,6 +39,7 @@ export class LanguageServerRegistrar implements IRegistrar {
 		// Register YAML schema contributor via vscode-yaml API (no workspace settings write)
 		const schemaManager = new CamelYamlSchemaManager(this.context);
 		void schemaManager.registerSchemaContributor(this.catalogService);
+		void schemaManager.registerXmlSchemaAssociation(this.catalogService);
 		schemaManager.registerListeners(this.context, this.catalogService);
 
 		// Register enable/disable toggle listener unconditionally — this must happen before the
