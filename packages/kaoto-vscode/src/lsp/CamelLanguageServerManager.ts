@@ -82,7 +82,7 @@ export class CamelLanguageServerManager {
 				configurationSection: ['camel'],
 				fileEvents: this.fileWatchers,
 			},
-			initializationOptions: initializationOptions ? { settings: initializationOptions } : undefined,
+			initializationOptions: initializationOptions ?? undefined,
 			middleware: {
 				workspace: {
 					didChangeConfiguration: async () => {
