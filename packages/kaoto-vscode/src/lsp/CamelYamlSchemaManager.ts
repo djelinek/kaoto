@@ -42,7 +42,7 @@ const SCHEMA_MAPPINGS: { pattern: RegExp; schemaKey: string }[] = [
  */
 export class CamelYamlSchemaManager {
 	private readonly catalogBasePath: string;
-	private schemaCache: Map<string, string> = new Map();
+	private schemaUris: Map<string, string> = new Map();
 
 	constructor(context: vscode.ExtensionContext) {
 		this.catalogBasePath = path.join(context.extensionPath, 'dist', 'webview', 'editors', 'kaoto', 'camel-catalog');
@@ -50,10 +50,10 @@ export class CamelYamlSchemaManager {
 
 	/**
 	 * Register as a schema contributor with the vscode-yaml extension.
-	 * This uses the programmatic API — no workspace settings modification.
+	 * Uses file:// URIs pointing to the bundled schema files directly.
 	 */
 	async registerSchemaContributor(catalogService: KaotoCatalogService): Promise<void> {
-		await this.loadSchemaCache(catalogService);
+		await this.loadSchemaUris(catalogService);
 
 		const yamlExtension = vscode.extensions.getExtension('redhat.vscode-yaml');
 		if (!yamlExtension) {
@@ -71,10 +71,9 @@ export class CamelYamlSchemaManager {
 			yamlApi.registerContributor(CONTRIBUTOR_ID, this.requestSchema.bind(this), this.requestSchemaContent.bind(this));
 
 			KaotoOutputChannel.logInfo('YAML schema contributor registered with vscode-yaml:');
-			for (const [schemaUri, content] of this.schemaCache) {
-				const patterns = SCHEMA_MAPPINGS.filter((m) => schemaUri.endsWith(m.schemaKey)).map((m) => m.pattern.source);
-				const sizeKB = (content.length / 1024).toFixed(0);
-				KaotoOutputChannel.logInfo(`  ${schemaUri} (${sizeKB} KB) → ${patterns.join(', ')}`);
+			for (const [schemaKey, schemaUri] of this.schemaUris) {
+				const patterns = SCHEMA_MAPPINGS.filter((m) => m.schemaKey === schemaKey).map((m) => m.pattern.source);
+				KaotoOutputChannel.logInfo(`  ${schemaKey} → ${schemaUri} (patterns: ${patterns.join(', ')})`);
 			}
 		} catch (error) {
 			KaotoOutputChannel.logError('Failed to register YAML schema contributor', error);
@@ -82,16 +81,14 @@ export class CamelYamlSchemaManager {
 	}
 
 	/**
-	 * Register listeners that reload the schema cache when the catalog changes.
-	 * Only updates the in-memory cache — no workspace settings writes, so no
-	 * interference with the catalog service's "Reopen editor" notification.
+	 * Register listeners that reload the schema URIs when the catalog changes.
 	 */
 	registerListeners(context: vscode.ExtensionContext, catalogService: KaotoCatalogService): void {
 		context.subscriptions.push(
 			vscode.workspace.onDidChangeConfiguration(async (event) => {
 				if (event.affectsConfiguration(KAOTO_RUNTIME_CATALOG_NAME_SETTING_ID) || event.affectsConfiguration(KAOTO_CATALOG_URL_SETTING_ID)) {
-					this.schemaCache.clear();
-					await this.loadSchemaCache(catalogService);
+					this.schemaUris.clear();
+					await this.loadSchemaUris(catalogService);
 				}
 			}),
 		);
@@ -99,31 +96,42 @@ export class CamelYamlSchemaManager {
 
 	/**
 	 * Called by vscode-yaml for each opened YAML file.
-	 * Returns a schema URI if the file matches a Kaoto pattern, or undefined to skip.
+	 * Returns a file:// URI to the schema if the file matches a Kaoto pattern.
 	 */
 	private requestSchema(resource: string): string | undefined {
 		for (const mapping of SCHEMA_MAPPINGS) {
 			if (mapping.pattern.test(resource)) {
-				const schemaUri = `kaoto://schema/${mapping.schemaKey}`;
-				return this.schemaCache.has(schemaUri) ? schemaUri : undefined;
+				return this.schemaUris.get(mapping.schemaKey);
 			}
 		}
 		return undefined;
 	}
 
 	/**
-	 * Called by vscode-yaml to get the actual schema content for a kaoto:// URI.
+	 * Called by vscode-yaml to load schema content for a URI.
+	 * Since we use file:// URIs, vscode-yaml reads the file directly.
+	 * This callback is only needed as a fallback.
 	 */
-	private requestSchemaContent(schemaUri: string): string | undefined {
-		return this.schemaCache.get(schemaUri);
+	private requestSchemaContent(schemaUri: string): string {
+		try {
+			const filePath = vscode.Uri.parse(schemaUri).fsPath;
+			if (fs.existsSync(filePath)) {
+				return fs.readFileSync(filePath, 'utf-8');
+			}
+		} catch {
+			// fall through
+		}
+		KaotoOutputChannel.logWarning(`Cannot read schema content for: ${schemaUri}`);
+		return '{}';
 	}
 
 	/**
-	 * Load schema files from the bundled catalog into the in-memory cache.
+	 * Load schema file URIs from the bundled catalog.
 	 */
-	private async loadSchemaCache(catalogService: KaotoCatalogService): Promise<void> {
+	private async loadSchemaUris(catalogService: KaotoCatalogService): Promise<void> {
 		const catalog = await catalogService.getSelectedIntegrationCatalog();
 		if (!catalog) {
+			KaotoOutputChannel.logWarning('No integration catalog selected, cannot load YAML schemas.');
 			return;
 		}
 
@@ -143,20 +151,20 @@ export class CamelYamlSchemaManager {
 			}
 
 			const catalogDir = path.dirname(catalogIndexPath);
-			KaotoOutputChannel.logInfo(`Loading YAML schemas from catalog: ${catalog.name} (${catalogIndexPath})`);
+			KaotoOutputChannel.logInfo(`Loading YAML schemas from catalog: ${catalog.name}`);
 			for (const mapping of SCHEMA_MAPPINGS) {
 				const schemaInfo = schemas[mapping.schemaKey];
 				if (schemaInfo?.file) {
 					const schemaFilePath = path.join(catalogDir, schemaInfo.file);
 					if (fs.existsSync(schemaFilePath)) {
-						const content = await fs.promises.readFile(schemaFilePath, 'utf-8');
-						this.schemaCache.set(`kaoto://schema/${mapping.schemaKey}`, content);
-						KaotoOutputChannel.logInfo(`  Loaded schema: ${mapping.schemaKey} → ${schemaFilePath}`);
+						const fileUri = vscode.Uri.file(schemaFilePath).toString();
+						this.schemaUris.set(mapping.schemaKey, fileUri);
+						KaotoOutputChannel.logInfo(`  ${mapping.schemaKey} → ${schemaFilePath}`);
 					}
 				}
 			}
 		} catch (error) {
-			KaotoOutputChannel.logError('Failed to load YAML schema cache', error);
+			KaotoOutputChannel.logError('Failed to load YAML schema URIs', error);
 		}
 	}
 }
