@@ -35,13 +35,6 @@ export class LanguageServerRegistrar implements IRegistrar {
 		this.configSync = new CamelLspConfigurationSync(this.catalogService);
 		this.lspManager = new CamelLanguageServerManager(this.context);
 
-		// YAML/XML schema associations disabled — the Camel LSP server now provides
-		// comprehensive completions, hover, and diagnostics for all YAML DSL contexts.
-		// Enabling the vscode-yaml schema contributor causes duplicate completion items.
-		// TODO: Add YAML schema validation directly to the Camel LSP server to provide
-		// structural validation (invalid fields, wrong nesting, type checking) without
-		// requiring the vscode-yaml extension.
-
 		// Register enable/disable toggle listener unconditionally — this must happen before the
 		// early return below so that re-enabling at runtime also works when the LSP was disabled
 		// at activation time (otherwise no listener would exist to catch the change).

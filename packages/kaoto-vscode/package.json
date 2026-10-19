@@ -1415,26 +1415,6 @@
             "scope": "window",
             "order": 0
           },
-          "kaoto.lsp.yamlSchema": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "markdownDescription": "Custom YAML schema associations. Keys are glob patterns, values are schema file paths or URLs.\n\nExample:\n```json\n{ \"**/custom-routes/*.yaml\": \"./schemas/my-camel-schema.json\" }\n```",
-            "default": null,
-            "scope": "window",
-            "order": 1
-          },
-          "kaoto.lsp.xmlSchema": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "markdownDescription": "Custom XML schema associations. Keys are glob patterns, values are schema file paths or URLs.",
-            "default": null,
-            "scope": "window",
-            "order": 2
-          },
           "kaoto.lsp.extraComponents": {
             "type": "array",
             "markdownDescription": "(Experimental) List of additional Camel components to include in the catalog, described as a JSON list respecting Camel catalog syntax.",

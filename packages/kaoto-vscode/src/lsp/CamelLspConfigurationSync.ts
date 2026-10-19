@@ -22,8 +22,6 @@ import { KaotoOutputChannel } from '../extension/KaotoOutputChannel';
 import {
 	KAOTO_CATALOG_URL_SETTING_ID,
 	KAOTO_LSP_EXTRA_COMPONENTS_SETTING_ID,
-	KAOTO_LSP_YAML_SCHEMA_SETTING_ID,
-	KAOTO_LSP_XML_SCHEMA_SETTING_ID,
 	KAOTO_RUNTIME_CATALOG_NAME_SETTING_ID,
 	KAOTO_TESTING_CATALOG_NAME_SETTING_ID,
 } from '../constants';
@@ -86,9 +84,7 @@ export class CamelLspConfigurationSync {
 				event.affectsConfiguration(KAOTO_RUNTIME_CATALOG_NAME_SETTING_ID) ||
 				event.affectsConfiguration(KAOTO_TESTING_CATALOG_NAME_SETTING_ID) ||
 				event.affectsConfiguration(KAOTO_CATALOG_URL_SETTING_ID) ||
-				event.affectsConfiguration(KAOTO_LSP_EXTRA_COMPONENTS_SETTING_ID) ||
-				event.affectsConfiguration(KAOTO_LSP_YAML_SCHEMA_SETTING_ID) ||
-				event.affectsConfiguration(KAOTO_LSP_XML_SCHEMA_SETTING_ID);
+				event.affectsConfiguration(KAOTO_LSP_EXTRA_COMPONENTS_SETTING_ID);
 
 			if (affectsLsp) {
 				KaotoOutputChannel.logInfo('LSP-relevant configuration changed, pushing updated settings.');
@@ -140,7 +136,7 @@ export class CamelLspConfigurationSync {
 	}
 
 	/**
-	 * Merge user-configured LSP settings (extra-components, schemas) into the settings object.
+	 * Merge user-configured LSP settings (extra-components) into the settings object.
 	 */
 	private mergeUserLspSettings(settings: Record<string, unknown>): void {
 		const config = vscode.workspace.getConfiguration();
@@ -149,16 +145,6 @@ export class CamelLspConfigurationSync {
 		const extraComponents = config.get<unknown[]>(KAOTO_LSP_EXTRA_COMPONENTS_SETTING_ID);
 		if (extraComponents && Array.isArray(extraComponents) && extraComponents.length > 0) {
 			camelSettings['extra-components'] = extraComponents;
-		}
-
-		const yamlSchema = config.get<Record<string, string>>(KAOTO_LSP_YAML_SCHEMA_SETTING_ID);
-		if (yamlSchema && Object.keys(yamlSchema).length > 0) {
-			camelSettings['Camel catalog YAML schema'] = yamlSchema;
-		}
-
-		const xmlSchema = config.get<Record<string, string>>(KAOTO_LSP_XML_SCHEMA_SETTING_ID);
-		if (xmlSchema && Object.keys(xmlSchema).length > 0) {
-			camelSettings['Camel catalog XML schema'] = xmlSchema;
 		}
 	}
 }
