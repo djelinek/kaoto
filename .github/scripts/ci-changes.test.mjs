@@ -10,6 +10,16 @@ import { selectJobs } from './ci-changes.mjs';
 const none = { ui: false, web: false, 'vscode-smoke': false, 'vscode-full': false, deploy: false, e2e: false, chromatic: false };
 const all = Object.fromEntries(Object.keys(none).map((key) => [key, true]));
 
+// Cases that pass no workspaces run against this checkout's Yarn graph, so they pin the real selection.
+// The others describe a graph the way `yarn workspaces list --verbose --json` prints it.
+const workspaceGraph = (dependencies) =>
+  Object.entries(dependencies).map(([location, workspaceDependencies]) => ({
+    location,
+    name: location === '.' ? 'kaoto' : location.replace('packages/', '@kaoto/'),
+    workspaceDependencies,
+    mismatchedWorkspaceDependencies: [],
+  }));
+
 test('UI changes validate the UI and embedded extension (smoke groups only) without deployment', () => {
   assert.deepEqual(selectJobs(['packages/ui/src/App.tsx']), {
     ...none,
@@ -132,6 +142,62 @@ test('documentation cannot suppress validation for a mixed change', () => {
 
 test('manual runs or unavailable comparison commits select everything', () => {
   assert.deepEqual(selectJobs(null), all);
+});
+
+test('a brand-new package between the UI library and the extension carries UI changes to the extension', () => {
+  const workspaces = workspaceGraph({
+    '.': [],
+    'packages/ui': [],
+    'packages/vscode-webview': ['packages/ui'],
+    'packages/kaoto-vscode': ['packages/vscode-webview'],
+    'packages/ui-tests-vscode': ['packages/kaoto-vscode'],
+  });
+  assert.deepEqual(selectJobs(['packages/ui/src/App.tsx'], 'pull_request', workspaces), {
+    ...none,
+    ui: true,
+    'vscode-smoke': true,
+  });
+});
+
+test('a new dependency of the extension UI tests selects their smoke groups when it changes', () => {
+  const workspaces = workspaceGraph({
+    '.': [],
+    'packages/ui-tests': [],
+    'packages/kaoto-vscode': [],
+    'packages/ui-tests-vscode': ['packages/kaoto-vscode', 'packages/ui-tests'],
+  });
+  assert.deepEqual(selectJobs(['packages/ui-tests/package.json'], 'pull_request', workspaces), {
+    ...none,
+    ui: true,
+    'vscode-smoke': true,
+    e2e: true,
+    chromatic: true,
+  });
+});
+
+// A brand-new workspace that depends on the UI library and has no CI rules yet.
+const withNewPackage = workspaceGraph({ '.': [], 'packages/ui': [], 'packages/kaoto-desktop': ['packages/ui'] });
+
+test('a change inside a brand-new package without CI rules selects all validation', () => {
+  assert.deepEqual(selectJobs(['packages/kaoto-desktop/src/main.ts'], 'pull_request', withNewPackage), all);
+});
+
+test('a brand-new package without CI rules adds no jobs when a workspace it depends on changes', () => {
+  assert.deepEqual(selectJobs(['packages/ui/src/App.tsx'], 'pull_request', withNewPackage), { ...none, ui: true });
+});
+
+test('a dependency cycle between workspaces still selects their jobs', () => {
+  const workspaces = workspaceGraph({
+    '.': [],
+    'packages/ui': ['packages/ui-tests'],
+    'packages/ui-tests': ['packages/ui'],
+  });
+  assert.deepEqual(selectJobs(['packages/ui/src/App.tsx'], 'pull_request', workspaces), {
+    ...none,
+    ui: true,
+    e2e: true,
+    chromatic: true,
+  });
 });
 
 test('the CLI writes Actions outputs for dispatch, first push and a missing comparison', (context) => {
