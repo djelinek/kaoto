@@ -23,3 +23,7 @@ export const KAOTO_NODE_TOOLBAR_TRIGGER_SETTING_ID = 'kaoto.nodeToolbarTrigger';
 export const KAOTO_COLOR_THEME_SETTING_ID = 'kaoto.colorTheme';
 
 export const KAOTO_CANVAS_LAYOUT_DIRECTION_SETTING_ID = 'kaoto.canvasLayoutDirection';
+
+export const KAOTO_FILES_EXCLUDE_SETTING_ID = 'kaoto.files.exclude';
+
+export const KAOTO_VIEWS_LEGACY_ENABLED_SETTING_ID = 'kaoto.views.legacy.enabled';

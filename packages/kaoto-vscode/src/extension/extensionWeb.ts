@@ -26,6 +26,7 @@ import { HelpFeedbackProvider } from '../views/help/HelpFeedbackProvider';
 import { IntegrationsProvider } from '../views/integrations/IntegrationsProvider';
 import { EditorRegistrar } from './registrars/EditorRegistrar';
 import { LifecycleRegistrar } from './registrars/LifecycleRegistrar';
+import { FilesRegistrar } from './registrars/FilesRegistrar';
 import { TestsRegistrar } from './registrars/TestsRegistrar';
 
 let backendProxy: VsCodeBackendProxy;
@@ -77,7 +78,13 @@ export async function activate(context: vscode.ExtensionContext) {
 	/*
 	 * register 'Tests' view provider
 	 */
-	new TestsRegistrar(context, undefined).registerTestsView();
+	const testsRegistrar = new TestsRegistrar(context, undefined);
+	testsRegistrar.registerTestsView();
+
+	/*
+	 * register 'Files' view provider
+	 */
+	new FilesRegistrar(context, undefined, () => testsRegistrar.getTestsProvider()).register();
 
 	/*
 	 * register 'Help & Feedback' view provider

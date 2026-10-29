@@ -36,6 +36,7 @@ import { DeploymentsRegistrar } from './registrars/DeploymentsRegistrar';
 import { TestsRegistrar } from './registrars/TestsRegistrar';
 import { InfrastructureRegistrar } from './registrars/InfrastructureRegistrar';
 import { OpenApiRegistrar } from './registrars/OpenApiRegistrar';
+import { FilesRegistrar } from './registrars/FilesRegistrar';
 
 let backendProxy: VsCodeBackendProxy;
 let telemetryService: TelemetryService;
@@ -88,17 +89,19 @@ export async function activate(context: vscode.ExtensionContext) {
 	telemetryService = await redhatService.getTelemetryService();
 
 	/*
-	 * register all views (Integrations, Deployments, Infrastructure, Tests, Help & Feedback, OpenAPI) first to avoid race conditions
+	 * register all views (Files, Integrations, Deployments, Infrastructure, Tests, Help & Feedback, OpenAPI) first to avoid race conditions
 	 */
 	context.subscriptions.push(vscode.window.registerTreeDataProvider(VIEW_HELP, new HelpFeedbackProvider(context.extensionUri.path)));
 
+	const testsRegistrar = new TestsRegistrar(context, telemetryService);
 	const registrars: IRegistrar[] = [
 		new EditorRegistrar(context, kieEditorStore, telemetryService),
 		new IntegrationsRegistrar(context, telemetryService, portManager),
 		new DeploymentsRegistrar(context, telemetryService, portManager),
 		new InfrastructureRegistrar(context, telemetryService),
-		new TestsRegistrar(context, telemetryService),
+		testsRegistrar,
 		new OpenApiRegistrar(context, telemetryService),
+		new FilesRegistrar(context, telemetryService, () => testsRegistrar.getTestsProvider()),
 		new ExecutorRegistrar(context, telemetryService, catalogService),
 		new LifecycleRegistrar(context, telemetryService),
 	];

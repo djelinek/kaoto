@@ -91,3 +91,45 @@ export const COMMAND_INFRASTRUCTURE_LOGS = 'kaoto.infrastructure.logs';
 export const COMMAND_INFRASTRUCTURE_COPY_URL = 'kaoto.infrastructure.copyUrl';
 
 export const COMMAND_INFRASTRUCTURE_COPY_PORT = 'kaoto.infrastructure.copyPort';
+
+export const COMMAND_FILES_REFRESH = 'kaoto.files.refresh';
+
+export const COMMAND_FILES_FILTER_ALL = 'kaoto.files.filter.all';
+
+export const COMMAND_FILES_FILTER_CAMEL = 'kaoto.files.filter.camel';
+
+export const COMMAND_FILES_FILTER_TESTS = 'kaoto.files.filter.tests';
+
+export const COMMAND_FILES_FILTER_OPENAPI = 'kaoto.files.filter.openapi';
+
+export const COMMAND_FILES_NEW_FILE = 'kaoto.files.newFile';
+
+export const COMMAND_FILES_NEW_FOLDER = 'kaoto.files.newFolder';
+
+export const COMMAND_FILES_RENAME = 'kaoto.files.rename';
+
+export const COMMAND_FILES_DELETE = 'kaoto.files.delete';
+
+export const COMMAND_FILES_CUT = 'kaoto.files.cut';
+
+export const COMMAND_FILES_COPY = 'kaoto.files.copy';
+
+export const COMMAND_FILES_PASTE = 'kaoto.files.paste';
+
+export const COMMAND_FILES_OPEN_TO_SIDE = 'kaoto.files.openToSide';
+
+export const COMMAND_FILES_REVEAL_IN_OS = 'kaoto.files.revealInOS';
+
+export const COMMAND_FILES_REVEAL_IN_EXPLORER = 'kaoto.files.revealInExplorer';
+
+export const COMMAND_FILES_OPEN_IN_TERMINAL = 'kaoto.files.openInTerminal';
+
+export const COMMAND_FILES_FIND_IN_FOLDER = 'kaoto.files.findInFolder';
+
+export const COMMAND_FILES_COPY_PATH = 'kaoto.files.copyPath';
+
+export const COMMAND_FILES_COPY_RELATIVE_PATH = 'kaoto.files.copyRelativePath';
+
+export const COMMAND_FILES_SELECT_FOR_COMPARE = 'kaoto.files.selectForCompare';
+
+export const COMMAND_FILES_COMPARE_WITH_SELECTED = 'kaoto.files.compareWithSelected';

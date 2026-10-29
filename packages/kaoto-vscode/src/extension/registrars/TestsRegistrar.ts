@@ -46,6 +46,13 @@ export class TestsRegistrar implements IRegistrar {
 		private readonly telemetryService: TelemetryService | undefined,
 	) {}
 
+	/**
+	 * The Tests view provider, which also holds the test results shown in the Kaoto Files view
+	 */
+	getTestsProvider(): TestsProvider | undefined {
+		return this.testsProvider;
+	}
+
 	register(): void {
 		this.registerTestsView();
 		this.registerTestsInitCommands();

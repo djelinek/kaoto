@@ -596,6 +596,115 @@
         "title": "Import",
         "category": "Kaoto",
         "icon": "$(symbol-reference)"
+      },
+      {
+        "command": "kaoto.files.refresh",
+        "title": "Refresh",
+        "category": "Kaoto",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "kaoto.files.filter.all",
+        "title": "Show All Files",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.filter.camel",
+        "title": "Show Camel Files",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.filter.tests",
+        "title": "Show Test Files",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.filter.openapi",
+        "title": "Show OpenAPI Files",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.newFile",
+        "title": "New File...",
+        "category": "Kaoto",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "kaoto.files.newFolder",
+        "title": "New Folder...",
+        "category": "Kaoto",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "kaoto.files.rename",
+        "title": "Rename...",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.delete",
+        "title": "Delete",
+        "category": "Kaoto",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "kaoto.files.cut",
+        "title": "Cut",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.copy",
+        "title": "Copy",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.paste",
+        "title": "Paste",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.openToSide",
+        "title": "Open to the Side",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.revealInOS",
+        "title": "Reveal in File Explorer",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.revealInExplorer",
+        "title": "Reveal in Explorer View",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.openInTerminal",
+        "title": "Open in Integrated Terminal",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.findInFolder",
+        "title": "Find in Folder...",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.copyPath",
+        "title": "Copy Path",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.copyRelativePath",
+        "title": "Copy Relative Path",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.selectForCompare",
+        "title": "Select for Compare",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.compareWithSelected",
+        "title": "Compare with Selected",
+        "category": "Kaoto"
       }
     ],
     "keybindings": [
@@ -622,6 +731,54 @@
         "key": "ctrl+y",
         "mac": "cmd+shift+z",
         "when": "activeCustomEditorId == webviewEditorsKaoto"
+      },
+      {
+        "command": "kaoto.files.rename",
+        "key": "f2",
+        "mac": "enter",
+        "when": "focusedView == kaoto.files && !inputFocus"
+      },
+      {
+        "command": "kaoto.files.delete",
+        "key": "delete",
+        "mac": "cmd+backspace",
+        "when": "focusedView == kaoto.files && !inputFocus"
+      },
+      {
+        "command": "kaoto.files.cut",
+        "key": "ctrl+x",
+        "mac": "cmd+x",
+        "when": "focusedView == kaoto.files && !inputFocus"
+      },
+      {
+        "command": "kaoto.files.copy",
+        "key": "ctrl+c",
+        "mac": "cmd+c",
+        "when": "focusedView == kaoto.files && !inputFocus"
+      },
+      {
+        "command": "kaoto.files.paste",
+        "key": "ctrl+v",
+        "mac": "cmd+v",
+        "when": "focusedView == kaoto.files && !inputFocus && kaoto.files.canPaste"
+      },
+      {
+        "command": "kaoto.files.copyPath",
+        "key": "shift+alt+c",
+        "mac": "alt+cmd+c",
+        "when": "focusedView == kaoto.files && !inputFocus"
+      },
+      {
+        "command": "kaoto.files.copyRelativePath",
+        "key": "ctrl+k ctrl+shift+alt+c",
+        "mac": "ctrl+shift+alt+c",
+        "when": "focusedView == kaoto.files && !inputFocus"
+      },
+      {
+        "command": "kaoto.files.revealInOS",
+        "key": "shift+alt+r",
+        "mac": "alt+cmd+r",
+        "when": "focusedView == kaoto.files && !inputFocus && !isWeb"
       }
     ],
     "menus": {
@@ -799,6 +956,62 @@
         {
           "command": "kaoto.infrastructure.copyPort",
           "when": "false"
+        },
+        {
+          "command": "kaoto.files.rename",
+          "when": "false"
+        },
+        {
+          "command": "kaoto.files.delete",
+          "when": "false"
+        },
+        {
+          "command": "kaoto.files.cut",
+          "when": "false"
+        },
+        {
+          "command": "kaoto.files.copy",
+          "when": "false"
+        },
+        {
+          "command": "kaoto.files.paste",
+          "when": "false"
+        },
+        {
+          "command": "kaoto.files.openToSide",
+          "when": "false"
+        },
+        {
+          "command": "kaoto.files.revealInOS",
+          "when": "false"
+        },
+        {
+          "command": "kaoto.files.revealInExplorer",
+          "when": "false"
+        },
+        {
+          "command": "kaoto.files.openInTerminal",
+          "when": "false"
+        },
+        {
+          "command": "kaoto.files.findInFolder",
+          "when": "false"
+        },
+        {
+          "command": "kaoto.files.copyPath",
+          "when": "false"
+        },
+        {
+          "command": "kaoto.files.copyRelativePath",
+          "when": "false"
+        },
+        {
+          "command": "kaoto.files.selectForCompare",
+          "when": "false"
+        },
+        {
+          "command": "kaoto.files.compareWithSelected",
+          "when": "false"
         }
       ],
       "editor/title": [
@@ -885,6 +1098,41 @@
           "command": "kaoto.openapi.import",
           "group": "navigation@1",
           "when": "view == kaoto.openapi"
+        },
+        {
+          "submenu": "kaoto.files.new",
+          "group": "navigation@1",
+          "when": "view == kaoto.files && workspaceFolderCount > 0"
+        },
+        {
+          "command": "kaoto.integrations.run.workspace",
+          "group": "navigation@2",
+          "when": "view == kaoto.files && !virtualWorkspace && kaoto.executorAvailable && workspaceFolderCount == 1 && !kaoto.workspaceHasPomXml && kaoto.files.filter =~ /^(all|camel)$/"
+        },
+        {
+          "command": "kaoto.integrations.run.all.workspaces",
+          "group": "navigation@2",
+          "when": "view == kaoto.files && !virtualWorkspace && kaoto.executorAvailable && workspaceFolderCount > 1 && kaoto.files.filter =~ /^(all|camel)$/"
+        },
+        {
+          "command": "kaoto.tests.clearResults",
+          "group": "navigation@3",
+          "when": "view == kaoto.files && kaoto.testResultsExist"
+        },
+        {
+          "submenu": "kaoto.files.filter",
+          "group": "navigation@4",
+          "when": "view == kaoto.files"
+        },
+        {
+          "command": "kaoto.files.refresh",
+          "group": "navigation@5",
+          "when": "view == kaoto.files"
+        },
+        {
+          "command": "kaoto.camel.jbang.export.workspace",
+          "group": "2_workspace@1",
+          "when": "view == kaoto.files && !virtualWorkspace && kaoto.executorAvailable && workspaceFolderCount == 1 && !kaoto.workspaceHasPomXml"
         }
       ],
       "view/item/context": [
@@ -900,7 +1148,7 @@
         },
         {
           "command": "kaoto.integrations.showSource",
-          "when": "view == kaoto.integrations && (viewItem == integration || viewItem == integration-standalone-child || viewItem == integration-maven-child || viewItem == file)",
+          "when": "(view == kaoto.integrations && (viewItem == integration || viewItem == integration-standalone-child || viewItem == integration-maven-child || viewItem == file) || view == kaoto.files && viewItem =~ /^integration/)",
           "group": "navigation@1"
         },
         {
@@ -910,22 +1158,22 @@
         },
         {
           "command": "kaoto.integrations.updateDependencies",
-          "when": "view == kaoto.integrations && viewItem == integration-maven-child && !virtualWorkspace && kaoto.executorAvailable",
+          "when": "view =~ /^kaoto\\.(integrations|files)$/ && viewItem == integration-maven-child && !virtualWorkspace && kaoto.executorAvailable",
           "group": "navigation@3"
         },
         {
           "command": "kaoto.integrations.run",
-          "when": "view == kaoto.integrations && (viewItem == integration || viewItem == integration-standalone-child) && !virtualWorkspace && kaoto.executorAvailable",
+          "when": "view =~ /^kaoto\\.(integrations|files)$/ && (viewItem == integration || viewItem == integration-standalone-child) && !virtualWorkspace && kaoto.executorAvailable",
           "group": "inline@1"
         },
         {
           "command": "kaoto.integrations.kubernetes.run",
-          "when": "view == kaoto.integrations && (viewItem == integration || viewItem == integration-standalone-child) && !virtualWorkspace && kaoto.executorAvailable",
+          "when": "view =~ /^kaoto\\.(integrations|files)$/ && (viewItem == integration || viewItem == integration-standalone-child) && !virtualWorkspace && kaoto.executorAvailable",
           "group": "inline@2"
         },
         {
           "command": "kaoto.camel.jbang.export",
-          "when": "view == kaoto.integrations && (viewItem == integration || viewItem == integration-standalone-child) && !virtualWorkspace && kaoto.executorAvailable",
+          "when": "view =~ /^kaoto\\.(integrations|files)$/ && (viewItem == integration || viewItem == integration-standalone-child) && !virtualWorkspace && kaoto.executorAvailable",
           "group": "inline@3"
         },
         {
@@ -970,7 +1218,7 @@
         },
         {
           "command": "kaoto.tests.run",
-          "when": "view == kaoto.tests && viewItem =~ /^citrus-test-file(-passed|-failed)?$/ && kaoto.executorAvailable",
+          "when": "view =~ /^kaoto\\.(tests|files)$/ && viewItem =~ /^citrus-test-file(-passed|-failed)?$/ && kaoto.executorAvailable",
           "group": "inline@1"
         },
         {
@@ -1000,13 +1248,155 @@
         },
         {
           "command": "kaoto.openapi.showSource",
-          "when": "view == kaoto.openapi && viewItem == openapi",
+          "when": "view =~ /^kaoto\\.(openapi|files)$/ && viewItem == openapi",
           "group": "navigation@1"
         },
         {
           "command": "kaoto.openapi.delete",
           "when": "view == kaoto.openapi && (viewItem == openapi || viewItem =~ /^openapi-folder/)",
           "group": "navigation@2"
+        },
+        {
+          "command": "kaoto.integrations.run.folder",
+          "when": "view == kaoto.files && viewItem =~ /^folder;.*camel/ && !virtualWorkspace && kaoto.executorAvailable",
+          "group": "inline@1"
+        },
+        {
+          "command": "kaoto.camel.jbang.export.folder",
+          "when": "view == kaoto.files && viewItem =~ /^folder;.*camel/ && !virtualWorkspace && kaoto.executorAvailable",
+          "group": "inline@2"
+        },
+        {
+          "command": "kaoto.tests.run.folder",
+          "when": "view == kaoto.files && viewItem =~ /^folder;.*tests/ && kaoto.files.filter == tests && kaoto.executorAvailable",
+          "group": "inline@1"
+        },
+        {
+          "command": "kaoto.files.newFile",
+          "when": "view == kaoto.files && viewItem =~ /^folder/",
+          "group": "1_new@1"
+        },
+        {
+          "command": "kaoto.files.newFolder",
+          "when": "view == kaoto.files && viewItem =~ /^folder/",
+          "group": "1_new@2"
+        },
+        {
+          "command": "kaoto.files.openToSide",
+          "when": "view == kaoto.files && viewItem =~ /^(integration|file|openapi|citrus-test-file)/",
+          "group": "navigation@10"
+        },
+        {
+          "command": "kaoto.files.revealInOS",
+          "when": "view == kaoto.files && viewItem != route && !isWeb && resourceScheme == file",
+          "group": "navigation@20"
+        },
+        {
+          "command": "kaoto.files.revealInExplorer",
+          "when": "view == kaoto.files && viewItem != route",
+          "group": "navigation@21"
+        },
+        {
+          "command": "kaoto.files.openInTerminal",
+          "when": "view == kaoto.files && viewItem != route",
+          "group": "navigation@30"
+        },
+        {
+          "command": "kaoto.files.selectForCompare",
+          "when": "view == kaoto.files && viewItem =~ /^(integration|file|openapi|citrus-test-file)/",
+          "group": "3_compare@1"
+        },
+        {
+          "command": "kaoto.files.compareWithSelected",
+          "when": "view == kaoto.files && viewItem =~ /^(integration|file|openapi|citrus-test-file)/ && kaoto.files.compareSelected",
+          "group": "3_compare@2"
+        },
+        {
+          "command": "kaoto.files.findInFolder",
+          "when": "view == kaoto.files && viewItem =~ /^folder/",
+          "group": "4_search@1"
+        },
+        {
+          "command": "kaoto.files.cut",
+          "when": "view == kaoto.files && viewItem != route",
+          "group": "5_cutcopypaste@1"
+        },
+        {
+          "command": "kaoto.files.copy",
+          "when": "view == kaoto.files && viewItem != route",
+          "group": "5_cutcopypaste@2"
+        },
+        {
+          "command": "kaoto.files.paste",
+          "when": "view == kaoto.files && viewItem =~ /^folder/ && kaoto.files.canPaste",
+          "group": "5_cutcopypaste@3"
+        },
+        {
+          "command": "kaoto.files.copyPath",
+          "when": "view == kaoto.files && viewItem != route",
+          "group": "6_copypath@1"
+        },
+        {
+          "command": "kaoto.files.copyRelativePath",
+          "when": "view == kaoto.files && viewItem != route",
+          "group": "6_copypath@2"
+        },
+        {
+          "command": "kaoto.files.rename",
+          "when": "view == kaoto.files && viewItem != route",
+          "group": "7_modification@1"
+        },
+        {
+          "command": "kaoto.files.delete",
+          "when": "view == kaoto.files && viewItem != route",
+          "group": "7_modification@2"
+        }
+      ],
+      "kaoto.files.filter": [
+        {
+          "command": "kaoto.files.filter.all",
+          "group": "1_filter@1",
+          "when": "kaoto.files.filter != all"
+        },
+        {
+          "command": "kaoto.files.filter.camel",
+          "group": "1_filter@2",
+          "when": "kaoto.files.filter != camel"
+        },
+        {
+          "command": "kaoto.files.filter.tests",
+          "group": "1_filter@3",
+          "when": "kaoto.files.filter != tests"
+        },
+        {
+          "command": "kaoto.files.filter.openapi",
+          "group": "1_filter@4",
+          "when": "kaoto.files.filter != openapi"
+        }
+      ],
+      "kaoto.files.new": [
+        {
+          "command": "kaoto.files.newFile",
+          "group": "1_file@1"
+        },
+        {
+          "command": "kaoto.files.newFolder",
+          "group": "1_file@2"
+        },
+        {
+          "submenu": "kaoto.new.file",
+          "group": "2_kaoto@1",
+          "when": "!virtualWorkspace && kaoto.executorAvailable"
+        },
+        {
+          "command": "kaoto.citrus.jbang.init.test",
+          "group": "2_kaoto@3",
+          "when": "!virtualWorkspace && kaoto.executorAvailable"
+        },
+        {
+          "command": "kaoto.openapi.import",
+          "group": "2_kaoto@4",
+          "when": "!virtualWorkspace"
         }
       ]
     },
@@ -1015,6 +1405,16 @@
         "id": "kaoto.new.file",
         "label": "New File...",
         "icon": "$(new-file)"
+      },
+      {
+        "id": "kaoto.files.filter",
+        "label": "Filter",
+        "icon": "$(filter)"
+      },
+      {
+        "id": "kaoto.files.new",
+        "label": "New...",
+        "icon": "$(add)"
       }
     ],
     "viewsWelcome": [
@@ -1057,6 +1457,31 @@
         "view": "kaoto.infrastructure",
         "contents": "You have not yet added a folder to the workspace.\n[Open Folder](command:vscode.openFolder)",
         "when": "workspaceFolderCount == 0"
+      },
+      {
+        "view": "kaoto.files",
+        "contents": "You have not yet added a folder to the workspace.\n[Open Folder](command:vscode.openFolder)",
+        "when": "workspaceFolderCount == 0"
+      },
+      {
+        "view": "kaoto.files",
+        "contents": "No Camel files found in the workspace.\n[New Camel File...](command:kaoto.new.camel.file)\n[Show All Files](command:kaoto.files.filter.all)\nTo learn more about Apache Camel [read docs](https://camel.apache.org/docs/).",
+        "when": "workspaceFolderCount > 0 && kaoto.files.filter == camel"
+      },
+      {
+        "view": "kaoto.files",
+        "contents": "No test files found in the workspace.\n[New Citrus Test...](command:kaoto.citrus.jbang.init.test)\n[Show All Files](command:kaoto.files.filter.all)\nTo learn more about Camel Testing [read docs](https://camel.apache.org/manual/camel-jbang-test.html).",
+        "when": "workspaceFolderCount > 0 && kaoto.files.filter == tests"
+      },
+      {
+        "view": "kaoto.files",
+        "contents": "No OpenAPI specifications found in the workspace.\n[Import OpenAPI...](command:kaoto.openapi.import)\n[Show All Files](command:kaoto.files.filter.all)\nTo learn more about OpenAPI and Kaoto [read docs](https://kaoto.io/docs/rest/).",
+        "when": "workspaceFolderCount > 0 && kaoto.files.filter == openapi"
+      },
+      {
+        "view": "kaoto.files",
+        "contents": "The workspace is empty.\n[New Camel File...](command:kaoto.new.camel.file)\n[New File...](command:kaoto.files.newFile)",
+        "when": "workspaceFolderCount > 0 && kaoto.files.filter == all"
       }
     ],
     "configuration": [
@@ -1180,9 +1605,12 @@
               "*-pipe.yaml",
               "application*.properties",
               "*.xsl",
+              "*.xslt",
+              "*.xsd",
+              ".kaoto",
               "pom.xml"
             ],
-            "markdownDescription": "Regular expression to filter files to be displayed in `Kaoto > Integrations` view.",
+            "markdownDescription": "Glob patterns of the files displayed in the `Kaoto > Integrations` view and by the **Camel** filter of the `Kaoto > Files` view.",
             "scope": "window",
             "order": 1
           },
@@ -1201,7 +1629,7 @@
               "jbang.properties",
               "citrus*.properties"
             ],
-            "markdownDescription": "Regular expression to filter files to be displayed in `Kaoto > Tests` view.",
+            "markdownDescription": "Glob patterns of the files displayed in the `Kaoto > Tests` view and by the **Tests** filter of the `Kaoto > Files` view.",
             "scope": "window",
             "order": 2
           },
@@ -1216,9 +1644,26 @@
               "*openapi.yml",
               "*openapi.json"
             ],
-            "markdownDescription": "Regular expression to filter files to be displayed in `Kaoto > OpenAPI` view.",
+            "markdownDescription": "Glob patterns of the files displayed in the `Kaoto > OpenAPI` view and by the **OpenAPI** filter of the `Kaoto > Files` view.",
             "scope": "window",
             "order": 3
+          },
+          "kaoto.files.exclude": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "markdownDescription": "Glob patterns of files and folders to hide in the `Kaoto > Files` view, relative to the workspace folder (for example `**/dist`). Files hidden by `#files.exclude#` are always hidden too.",
+            "scope": "resource",
+            "order": 4
+          },
+          "kaoto.views.legacy.enabled": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Show the former `Integrations`, `Tests` and `OpenAPI` views next to the `Kaoto > Files` view.",
+            "scope": "window",
+            "order": 5
           }
         }
       },
@@ -1418,11 +1863,19 @@
     "views": {
       "kaoto-view": [
         {
+          "id": "kaoto.files",
+          "name": "Files",
+          "contextualTitle": "Kaoto",
+          "icon": "icons/kaoto.png",
+          "initialSize": 4
+        },
+        {
           "id": "kaoto.integrations",
           "name": "Integrations",
           "contextualTitle": "Kaoto",
           "icon": "icons/kaoto.png",
-          "initialSize": 2
+          "initialSize": 2,
+          "when": "config.kaoto.views.legacy.enabled"
         },
         {
           "id": "kaoto.deployments",
@@ -1437,14 +1890,16 @@
           "name": "OpenAPI",
           "contextualTitle": "Kaoto",
           "icon": "icons/kaoto.png",
-          "initialSize": 2
+          "initialSize": 2,
+          "when": "config.kaoto.views.legacy.enabled"
         },
         {
           "id": "kaoto.tests",
           "name": "Tests",
           "contextualTitle": "Kaoto",
           "icon": "icons/kaoto.png",
-          "initialSize": 2
+          "initialSize": 2,
+          "when": "config.kaoto.views.legacy.enabled"
         },
         {
           "id": "kaoto.infrastructure",
