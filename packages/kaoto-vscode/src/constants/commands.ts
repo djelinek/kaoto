@@ -134,8 +134,4 @@ export const COMMAND_FILES_SELECT_FOR_COMPARE = 'kaoto.files.selectForCompare';
 
 export const COMMAND_FILES_COMPARE_WITH_SELECTED = 'kaoto.files.compareWithSelected';
 
-export const COMMAND_FILES_NEW_FILE_IN_ROOT = 'kaoto.files.newFileInRoot';
-
-export const COMMAND_FILES_NEW_FOLDER_IN_ROOT = 'kaoto.files.newFolderInRoot';
-
 export const COMMAND_FILES_PASTE_IN_ROOT = 'kaoto.files.pasteInRoot';

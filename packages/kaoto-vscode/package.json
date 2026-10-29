@@ -707,18 +707,6 @@
         "category": "Kaoto"
       },
       {
-        "command": "kaoto.files.newFileInRoot",
-        "title": "New File in Workspace Root...",
-        "category": "Kaoto",
-        "icon": "$(new-file)"
-      },
-      {
-        "command": "kaoto.files.newFolderInRoot",
-        "title": "New Folder in Workspace Root...",
-        "category": "Kaoto",
-        "icon": "$(new-folder)"
-      },
-      {
         "command": "kaoto.files.pasteInRoot",
         "title": "Paste into Workspace Root",
         "category": "Kaoto"
@@ -1159,16 +1147,6 @@
           "command": "kaoto.files.pasteInRoot",
           "group": "1_root@1",
           "when": "view == kaoto.files && kaoto.files.canPaste"
-        },
-        {
-          "command": "kaoto.files.newFileInRoot",
-          "group": "1_root@2",
-          "when": "view == kaoto.files && workspaceFolderCount > 0"
-        },
-        {
-          "command": "kaoto.files.newFolderInRoot",
-          "group": "1_root@3",
-          "when": "view == kaoto.files && workspaceFolderCount > 0"
         }
       ],
       "view/item/context": [
@@ -1418,14 +1396,6 @@
         {
           "command": "kaoto.files.newFolder",
           "group": "1_file@2"
-        },
-        {
-          "command": "kaoto.files.newFileInRoot",
-          "group": "1_root@1"
-        },
-        {
-          "command": "kaoto.files.newFolderInRoot",
-          "group": "1_root@2"
         },
         {
           "submenu": "kaoto.files.newCamel",
