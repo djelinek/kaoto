@@ -113,7 +113,7 @@ Use the Kaoto DataMapper to map data between input and output structures and to 
 <table><tr>
 <td valign="middle" width="40%">
 <h3>Powerful Sidebar Views</h3>
-Browse integration files, orchestrate running Camel integrations, initialize new routes, export as Maven projects for Quarkus or Spring Boot, run locally, and deploy to OpenShift/Kubernetes - all from dedicated sidebar views.
+Browse all workspace files in the <b>Files</b> view, with quick filters for Camel, test and OpenAPI files and the file actions of the VS Code Explorer. Orchestrate running Camel integrations, initialize new routes, export as Maven projects for Quarkus or Spring Boot, run locally, and deploy to OpenShift/Kubernetes - all from dedicated sidebar views.
 </td>
 <td width="60%">
 <img src="./images/readme/features-showcase/sidebar.png" alt="Sidebar Views" width="100%"/>
