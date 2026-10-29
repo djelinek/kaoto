@@ -1428,7 +1428,7 @@
           "group": "1_root@2"
         },
         {
-          "submenu": "kaoto.new.file",
+          "submenu": "kaoto.files.newCamel",
           "group": "2_kaoto@1",
           "when": "!virtualWorkspace && kaoto.executorAvailable"
         },
@@ -1441,6 +1441,20 @@
           "command": "kaoto.openapi.import",
           "group": "2_kaoto@4",
           "when": "!virtualWorkspace"
+        }
+      ],
+      "kaoto.files.newCamel": [
+        {
+          "command": "kaoto.camel.jbang.init.route",
+          "group": "kaoto@1"
+        },
+        {
+          "command": "kaoto.camel.jbang.init.kamelet.yaml",
+          "group": "kaoto@2"
+        },
+        {
+          "command": "kaoto.camel.jbang.init.pipe.yaml",
+          "group": "kaoto@3"
         }
       ]
     },
@@ -1459,6 +1473,11 @@
         "id": "kaoto.files.new",
         "label": "New...",
         "icon": "$(add)"
+      },
+      {
+        "id": "kaoto.files.newCamel",
+        "label": "New Camel File...",
+        "icon": "$(new-file)"
       }
     ],
     "viewsWelcome": [
