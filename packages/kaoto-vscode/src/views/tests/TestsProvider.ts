@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import { AbstractFolderTreeProvider } from '../shared/AbstractFolderTreeProvider';
-import { commands, Disposable, RelativePattern, TreeItem, TreeItemCollapsibleState, Uri, workspace } from 'vscode';
+import { commands, Disposable, Event, EventEmitter, RelativePattern, TreeItem, TreeItemCollapsibleState, Uri, workspace } from 'vscode';
 import { Test } from './Test';
 import { TestResult } from '../../types/TestTreeItemType';
 import { TestFolder } from './TestFolder';
@@ -40,6 +40,13 @@ export class TestsProvider extends AbstractFolderTreeProvider<TestFolder> {
 
 	/** Persistent storage of test results that survives cache clears */
 	private readonly testResults: Map<string, TestResult> = new Map();
+
+	/** File paths of the tests that are running right now */
+	private readonly runningTests = new Set<string>();
+
+	/** Fires the file path of a test whose running state or result changed, or `undefined` when all results changed */
+	private readonly _onDidChangeTestState = new EventEmitter<string | undefined>();
+	readonly onDidChangeTestState: Event<string | undefined> = this._onDidChangeTestState.event;
 
 	/** Paths awaiting a batched full refresh (items not yet in cache) */
 	private readonly pendingRefreshPaths = new Set<string>();
@@ -133,6 +140,7 @@ export class TestsProvider extends AbstractFolderTreeProvider<TestFolder> {
 			this.pendingRefreshPaths.clear();
 		}
 		this.configChangeDisposable?.dispose();
+		this._onDidChangeTestState.dispose();
 		super.dispose();
 	}
 
@@ -171,6 +179,12 @@ export class TestsProvider extends AbstractFolderTreeProvider<TestFolder> {
 	 * @param running Whether the test is running
 	 */
 	setTestRunning(filePath: string, running: boolean): void {
+		if (running) {
+			this.runningTests.add(filePath);
+		} else {
+			this.runningTests.delete(filePath);
+		}
+		this._onDidChangeTestState.fire(filePath);
 		const testItem = this.testItemCache.get(filePath);
 		if (testItem) {
 			testItem.setRunning(running);
@@ -204,6 +218,7 @@ export class TestsProvider extends AbstractFolderTreeProvider<TestFolder> {
 	setTestResult(filePath: string, result: TestResult): void {
 		this.testResults.set(filePath, result);
 		this.updateResultsContext();
+		this._onDidChangeTestState.fire(filePath);
 
 		const testItem = this.testItemCache.get(filePath);
 		if (testItem) {
@@ -218,12 +233,29 @@ export class TestsProvider extends AbstractFolderTreeProvider<TestFolder> {
 	clearAllResults(): void {
 		this.testResults.clear();
 		this.updateResultsContext();
+		this._onDidChangeTestState.fire(undefined);
 
 		for (const testItem of this.testItemCache.values()) {
 			testItem.setResult('none');
 		}
 
 		this.refresh();
+	}
+
+	/**
+	 * Get the last known result of a test
+	 * @param filePath The file path of the test
+	 */
+	getTestResult(filePath: string): TestResult {
+		return this.testResults.get(filePath) ?? 'none';
+	}
+
+	/**
+	 * Check if a test is running right now
+	 * @param filePath The file path of the test
+	 */
+	isTestRunning(filePath: string): boolean {
+		return this.runningTests.has(filePath);
 	}
 
 	private updateResultsContext(): void {
