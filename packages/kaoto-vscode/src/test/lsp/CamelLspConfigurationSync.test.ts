@@ -84,6 +84,54 @@ suite('CamelLspConfigurationSync', () => {
 			const camelSettings = settings['camel'] as Record<string, unknown>;
 			expect(camelSettings['Camel catalog version']).to.equal('4.14.7');
 			expect(camelSettings['Camel catalog runtime provider']).to.equal('QUARKUS');
+			expect(camelSettings['Camel catalog runtime provider version']).to.equal('3.35.0');
+		});
+
+		test('should send the Camel Spring Boot version as runtime provider version', () => {
+			const catalog = {
+				name: 'Camel Spring Boot 4.18.3.redhat-00006',
+				version: '4.18.3.redhat-00006',
+				runtime: 'Spring Boot',
+				fileName: 'camel-springboot/4.18.3.redhat-00006/index.json',
+				camelCatalogVersion: '4.18.3.redhat-00005',
+				executorVersion: '4.18.3.redhat-00005',
+				runtimeProviderVersion: '4.18.3.redhat-00006',
+				frameworkVersion: '3.5.11',
+			};
+
+			const settings = CamelLspConfigurationSync.buildCamelSettingsFromCatalog(catalog);
+			const camelSettings = settings['camel'] as Record<string, unknown>;
+			expect(camelSettings['Camel catalog version']).to.equal('4.18.3.redhat-00005');
+			expect(camelSettings['Camel catalog runtime provider']).to.equal('SPRINGBOOT');
+			expect(camelSettings['Camel catalog runtime provider version']).to.equal('4.18.3.redhat-00006');
+		});
+
+		test('should not send a runtime provider version for Main catalog', () => {
+			const catalog = {
+				name: 'Camel Main 4.22.1',
+				version: '4.22.1',
+				runtime: 'Main',
+				fileName: 'camel-main/4.22.1/index.json',
+				camelCatalogVersion: '4.22.1',
+				runtimeProviderVersion: '4.22.1',
+			};
+
+			const settings = CamelLspConfigurationSync.buildCamelSettingsFromCatalog(catalog);
+			const camelSettings = settings['camel'] as Record<string, unknown>;
+			expect(camelSettings).to.not.have.property('Camel catalog runtime provider version');
+		});
+
+		test('should not send Citrus catalog to the Camel LSP', () => {
+			const catalog = {
+				name: 'Citrus 4.10.1',
+				version: '4.10.1',
+				runtime: 'Citrus',
+				fileName: 'citrus/4.10.1/index.json',
+				camelCatalogVersion: '4.10.1',
+			};
+
+			const settings = CamelLspConfigurationSync.buildCamelSettingsFromCatalog(catalog);
+			expect(settings['camel']).to.deep.equal({});
 		});
 
 		test('should fall back to version when camelCatalogVersion is empty', () => {

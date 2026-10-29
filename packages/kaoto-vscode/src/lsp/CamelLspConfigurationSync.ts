@@ -122,14 +122,24 @@ export class CamelLspConfigurationSync {
 	 *
 	 * - 'Camel catalog runtime provider': one of 'DEFAULT', 'SPRINGBOOT', 'QUARKUS'.
 	 *   Switches the in-memory RuntimeProvider for the catalog.
+	 *
+	 * - 'Camel catalog runtime provider version': the Camel Quarkus or Camel Spring Boot version,
+	 *   catalog.runtimeProviderVersion. The server downloads the catalog of this runtime version
+	 *   (camel-quarkus-catalog or camel-catalog-provider-springboot). Not sent for Main.
+	 *
+	 * Citrus catalogs are not Camel catalogs, no settings are sent for them and the server keeps its bundled catalog.
 	 */
 	static buildCamelSettingsFromCatalog(catalog: CatalogLibraryEntry | undefined): Record<string, unknown> {
 		const camelSettings: Record<string, unknown> = {};
 
-		if (catalog) {
+		if (catalog && !catalog.runtime.toLowerCase().includes('citrus')) {
 			const catalogVersion = catalog.camelCatalogVersion || catalog.version;
 			camelSettings['Camel catalog version'] = catalogVersion;
-			camelSettings['Camel catalog runtime provider'] = CamelLspConfigurationSync.mapRuntimeToLspProvider(catalog.runtime);
+			const runtimeProvider = CamelLspConfigurationSync.mapRuntimeToLspProvider(catalog.runtime);
+			camelSettings['Camel catalog runtime provider'] = runtimeProvider;
+			if (runtimeProvider !== 'DEFAULT' && catalog.runtimeProviderVersion) {
+				camelSettings['Camel catalog runtime provider version'] = catalog.runtimeProviderVersion;
+			}
 		}
 
 		return { camel: camelSettings };
