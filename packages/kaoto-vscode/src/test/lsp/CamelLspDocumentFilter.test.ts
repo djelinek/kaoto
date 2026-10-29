@@ -15,12 +15,7 @@
  */
 import { expect } from 'chai';
 import * as vscode from 'vscode';
-import {
-	CAMEL_LSP_DOCUMENT_SELECTORS,
-	CAMEL_LSP_FILE_WATCHER_GLOBS,
-	CAMEL_LSP_START_SELECTORS,
-	isCamelLspStartDocument,
-} from '../../lsp/CamelLspDocumentFilter';
+import { CAMEL_LSP_DOCUMENT_SELECTORS, CAMEL_LSP_FILE_WATCHER_GLOBS, isCamelLspDocument } from '../../lsp/CamelLspDocumentFilter';
 
 suite('CamelLspDocumentFilter', () => {
 	test('should define document selectors for Camel YAML files', () => {
@@ -50,6 +45,12 @@ suite('CamelLspDocumentFilter', () => {
 		expect(patterns).to.include('**/application*.properties');
 	});
 
+	test('should define document selectors for the properties files of the Quarkus and Spring Boot extensions', () => {
+		const selectors = CAMEL_LSP_DOCUMENT_SELECTORS.filter((s) => s.pattern === '**/application*.properties');
+
+		expect(selectors.map((s) => s.language)).to.have.members(['properties', 'quarkus-properties', 'spring-boot-properties']);
+	});
+
 	test('should define file watcher globs matching Kaoto file patterns', () => {
 		expect(CAMEL_LSP_FILE_WATCHER_GLOBS).to.be.an('array');
 		expect(CAMEL_LSP_FILE_WATCHER_GLOBS).to.include('**/*.camel.yaml');
@@ -72,13 +73,7 @@ suite('CamelLspDocumentFilter', () => {
 		expect(broadXml.length).to.equal(0);
 	});
 
-	test('should start the server for all the Camel selectors except the application properties', () => {
-		expect(CAMEL_LSP_START_SELECTORS.map((s) => s.pattern)).to.deep.equal(
-			CAMEL_LSP_DOCUMENT_SELECTORS.filter((s) => s.language !== 'properties').map((s) => s.pattern),
-		);
-	});
-
-	suite('isCamelLspStartDocument', () => {
+	suite('isCamelLspDocument', () => {
 		const openFixtureDocument = (...pathSegments: string[]): Thenable<vscode.TextDocument> => {
 			const fixtureFolder = vscode.workspace.workspaceFolders?.[0]?.uri;
 			if (!fixtureFolder) {
@@ -87,23 +82,35 @@ suite('CamelLspDocumentFilter', () => {
 			return vscode.workspace.openTextDocument(vscode.Uri.joinPath(fixtureFolder, ...pathSegments));
 		};
 
-		test('should start the server for a Camel route', async () => {
+		// the test instance has neither the Quarkus nor the Spring Boot extension, which define these languages
+		const documentWithLanguage = (filePath: string, languageId: string) =>
+			({ uri: vscode.Uri.file(filePath), languageId }) as unknown as vscode.TextDocument;
+
+		test('should serve a Camel route', async () => {
 			const route = await openFixtureDocument('suggestions', 'route.camel.yaml');
 
-			expect(isCamelLspStartDocument(route)).to.be.true;
+			expect(isCamelLspDocument(route)).to.be.true;
 		});
 
-		test('should not start the server for application properties, which the running server serves', async () => {
+		test('should serve application properties', async () => {
 			const properties = await openFixtureDocument('suggestions', 'application.properties');
 
-			expect(isCamelLspStartDocument(properties)).to.be.false;
-			expect(vscode.languages.match(CAMEL_LSP_DOCUMENT_SELECTORS, properties)).to.be.greaterThan(0);
+			expect(isCamelLspDocument(properties)).to.be.true;
 		});
 
-		test('should not start the server for other XML files', async () => {
+		test('should serve the application properties of the Quarkus and Spring Boot extensions', () => {
+			expect(isCamelLspDocument(documentWithLanguage('/project/src/main/resources/application.properties', 'quarkus-properties'))).to.be.true;
+			expect(isCamelLspDocument(documentWithLanguage('/project/src/main/resources/application-dev.properties', 'spring-boot-properties'))).to.be.true;
+		});
+
+		test('should not serve other properties files', () => {
+			expect(isCamelLspDocument(documentWithLanguage('/project/src/main/resources/messages.properties', 'properties'))).to.be.false;
+		});
+
+		test('should not serve other XML files', async () => {
 			const pom = await openFixtureDocument('camel-maven-main-project', 'pom.xml');
 
-			expect(isCamelLspStartDocument(pom)).to.be.false;
+			expect(isCamelLspDocument(pom)).to.be.false;
 		});
 	});
 });

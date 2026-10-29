@@ -17,7 +17,7 @@ import * as vscode from 'vscode';
 import { KAOTO_LSP_ENABLED_SETTING_ID, KAOTO_LSP_SERVER_JAR_SETTING_ID } from '../../constants';
 import { CamelLanguageServerManager } from '../../lsp/CamelLanguageServerManager';
 import { CamelLspConfigurationSync } from '../../lsp/CamelLspConfigurationSync';
-import { isCamelLspStartDocument } from '../../lsp/CamelLspDocumentFilter';
+import { isCamelLspDocument } from '../../lsp/CamelLspDocumentFilter';
 import { KaotoOutputChannel } from '../KaotoOutputChannel';
 import { KaotoCatalogService } from '../../services/KaotoCatalogService';
 import { IRegistrar } from './IRegistrar';
@@ -71,19 +71,19 @@ export class LanguageServerRegistrar implements IRegistrar {
 	}
 
 	/**
-	 * Starts the LSP now when a Camel file is open, otherwise when the first one is opened,
-	 * so that windows without Camel files don't download or run the server.
+	 * Starts the LSP now when a Camel or application properties file is open, otherwise when the first one is opened,
+	 * so that windows without such files don't download or run the server.
 	 */
 	private startWhenCamelFileOpens(): void {
-		if (vscode.workspace.textDocuments.some(isCamelLspStartDocument)) {
+		if (vscode.workspace.textDocuments.some(isCamelLspDocument)) {
 			this.startInBackground();
 			return;
 		}
 
 		if (!this.camelDocumentListener) {
-			KaotoOutputChannel.logInfo('Camel Language Server will start when a Camel file is opened.');
+			KaotoOutputChannel.logInfo('Camel Language Server will start when a Camel or application properties file is opened.');
 			this.camelDocumentListener = vscode.workspace.onDidOpenTextDocument((document) => {
-				if (isCamelLspStartDocument(document) && LanguageServerRegistrar.isEnabled()) {
+				if (isCamelLspDocument(document) && LanguageServerRegistrar.isEnabled()) {
 					this.disposeCamelDocumentListener();
 					this.startInBackground();
 				}
