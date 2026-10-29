@@ -1125,23 +1125,23 @@
         },
         {
           "command": "kaoto.tests.clearResults",
-          "group": "navigation@3",
+          "group": "navigation@4",
           "when": "view == kaoto.files && kaoto.testResultsExist"
         },
         {
           "submenu": "kaoto.files.filter",
-          "group": "navigation@4",
-          "when": "view == kaoto.files"
-        },
-        {
-          "command": "kaoto.files.refresh",
           "group": "navigation@5",
           "when": "view == kaoto.files"
         },
         {
+          "command": "kaoto.files.refresh",
+          "group": "1_view@1",
+          "when": "view == kaoto.files"
+        },
+        {
           "command": "kaoto.camel.jbang.export.workspace",
-          "group": "2_workspace@1",
-          "when": "view == kaoto.files && !virtualWorkspace && kaoto.executorAvailable && workspaceFolderCount == 1 && !kaoto.workspaceHasPomXml"
+          "group": "navigation@3",
+          "when": "view == kaoto.files && !virtualWorkspace && kaoto.executorAvailable && workspaceFolderCount == 1 && !kaoto.workspaceHasPomXml && kaoto.files.filter =~ /^(all|camel)$/"
         },
         {
           "command": "kaoto.files.pasteInRoot",
