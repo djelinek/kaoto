@@ -19,5 +19,6 @@
     "--trait",
     "container.image-pull-policy=IfNotPresent",
     "--camel-version=4.22.1"
-  ]
+  ],
+  "kaoto.views.legacy.enabled": true
 }
