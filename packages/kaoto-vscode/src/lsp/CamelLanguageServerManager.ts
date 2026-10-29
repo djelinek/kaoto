@@ -24,7 +24,8 @@ import { CAMEL_LSP_DOCUMENT_SELECTORS, CAMEL_LSP_FILE_WATCHER_GLOBS } from './Ca
 import { CamelLspServerDownloader } from './CamelLspServerDownloader';
 
 const LANGUAGE_CLIENT_ID = 'LANGUAGE_ID_APACHE_CAMEL_KAOTO';
-const LANGUAGE_CLIENT_NAME = 'Camel Language Server (Kaoto)';
+// also the name of the client's output channel, listed next to the 'Kaoto' channel
+const LANGUAGE_CLIENT_NAME = 'Kaoto - Camel Language Server';
 
 type StatusBarState = 'starting' | 'running' | 'error';
 
