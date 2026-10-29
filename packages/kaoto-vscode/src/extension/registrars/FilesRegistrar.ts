@@ -28,10 +28,13 @@ import {
 	COMMAND_FILES_FILTER_TESTS,
 	COMMAND_FILES_FIND_IN_FOLDER,
 	COMMAND_FILES_NEW_FILE,
+	COMMAND_FILES_NEW_FILE_IN_ROOT,
 	COMMAND_FILES_NEW_FOLDER,
+	COMMAND_FILES_NEW_FOLDER_IN_ROOT,
 	COMMAND_FILES_OPEN_IN_TERMINAL,
 	COMMAND_FILES_OPEN_TO_SIDE,
 	COMMAND_FILES_PASTE,
+	COMMAND_FILES_PASTE_IN_ROOT,
 	COMMAND_FILES_REFRESH,
 	COMMAND_FILES_RENAME,
 	COMMAND_FILES_REVEAL_IN_EXPLORER,
@@ -155,6 +158,33 @@ export class FilesRegistrar implements IRegistrar {
 				await this.operations.paste(folder);
 			}
 		});
+
+		// a single folder workspace has no root item (like the native Explorer), and extensions cannot add a context menu
+		// to the empty space of a view, so these commands of the view title always target the workspace folder
+		this.context.subscriptions.push(
+			vscode.commands.registerCommand(COMMAND_FILES_NEW_FILE_IN_ROOT, async () => {
+				const folder = await this.getTargetFolder(undefined);
+				const created = folder ? await this.operations.newFile(folder) : undefined;
+				if (created) {
+					await this.reveal(created);
+				}
+				await sendCommandTrackingEvent(this.telemetryService, COMMAND_FILES_NEW_FILE_IN_ROOT);
+			}),
+			vscode.commands.registerCommand(COMMAND_FILES_NEW_FOLDER_IN_ROOT, async () => {
+				const folder = await this.getTargetFolder(undefined);
+				if (folder) {
+					await this.operations.newFolder(folder);
+				}
+				await sendCommandTrackingEvent(this.telemetryService, COMMAND_FILES_NEW_FOLDER_IN_ROOT);
+			}),
+			vscode.commands.registerCommand(COMMAND_FILES_PASTE_IN_ROOT, async () => {
+				const folder = await this.getTargetFolder(undefined);
+				if (folder) {
+					await this.operations.paste(folder);
+				}
+				await sendCommandTrackingEvent(this.telemetryService, COMMAND_FILES_PASTE_IN_ROOT);
+			}),
+		);
 	}
 
 	private registerPathAndRevealCommands(): void {
