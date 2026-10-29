@@ -280,23 +280,27 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 		if (!targetFolder) {
 			return;
 		}
-		const treeItems = dataTransfer.get(KaotoFilesProvider.TREE_MIME_TYPE)?.value as TreeItem[] | undefined;
-		if (treeItems && treeItems.length > 0) {
-			const sources = treeItems
-				.filter((item) => !(item instanceof Route))
+		const uriList = await dataTransfer.get(KaotoFilesProvider.URI_LIST_MIME_TYPE)?.asString();
+		const droppedUris = (uriList ?? '')
+			.split(/\r?\n/)
+			.map((line) => line.trim())
+			.filter((line) => line.length > 0 && !line.startsWith('#'))
+			.map((line) => Uri.parse(line));
+
+		// items dragged inside this view are moved, like in the native Explorer
+		const treeTransferItem = dataTransfer.get(KaotoFilesProvider.TREE_MIME_TYPE);
+		if (treeTransferItem) {
+			const treeItems = Array.isArray(treeTransferItem.value) ? (treeTransferItem.value as unknown[]) : [];
+			const treeUris = treeItems
+				.filter((item): item is TreeItem => item instanceof TreeItem && !(item instanceof Route))
 				.map((item) => item.resourceUri)
 				.filter((uri): uri is Uri => !!uri);
-			await this.dropHandler.move(sources, targetFolder);
+			await this.dropHandler.move(treeUris.length > 0 ? treeUris : droppedUris, targetFolder);
 			return;
 		}
-		const uriList = await dataTransfer.get(KaotoFilesProvider.URI_LIST_MIME_TYPE)?.asString();
-		if (uriList) {
-			const sources = uriList
-				.split(/\r?\n/)
-				.map((line) => line.trim())
-				.filter((line) => line.length > 0 && !line.startsWith('#'))
-				.map((line) => Uri.parse(line));
-			await this.dropHandler.copy(sources, targetFolder);
+		// files dropped from the OS or other views are copied
+		if (droppedUris.length > 0) {
+			await this.dropHandler.copy(droppedUris, targetFolder);
 		}
 	}
 

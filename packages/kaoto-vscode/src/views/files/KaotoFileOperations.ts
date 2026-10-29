@@ -167,6 +167,8 @@ export class KaotoFileOperations implements DropHandler {
 	 */
 	async move(sources: Uri[], targetFolder: Uri): Promise<void> {
 		const edit = new WorkspaceEdit();
+		// WorkspaceEdit.size only counts text edits, so the file moves are counted here
+		let moves = 0;
 		for (const source of sources) {
 			if (this.isSameOrParent(source, targetFolder)) {
 				window.showErrorMessage(`Cannot move '${basename(source.path)}' into itself.`);
@@ -190,8 +192,9 @@ export class KaotoFileOperations implements DropHandler {
 				overwrite = true;
 			}
 			edit.renameFile(source, target, { overwrite });
+			moves++;
 		}
-		if (edit.size > 0 && !(await workspace.applyEdit(edit))) {
+		if (moves > 0 && !(await workspace.applyEdit(edit))) {
 			window.showErrorMessage('Unable to move the selected files.');
 		}
 	}
