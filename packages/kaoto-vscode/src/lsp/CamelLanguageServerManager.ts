@@ -18,8 +18,10 @@ import * as path from 'path'; // NOSONAR
 import * as fs from 'fs'; // NOSONAR
 import { execFile } from 'child_process';
 import { Executable, LanguageClient, LanguageClientOptions } from 'vscode-languageclient/node';
+import { KAOTO_LSP_SERVER_JAR_SETTING_ID } from '../constants';
 import { KaotoOutputChannel } from '../extension/KaotoOutputChannel';
 import { CAMEL_LSP_DOCUMENT_SELECTORS, CAMEL_LSP_FILE_WATCHER_GLOBS } from './CamelLspDocumentFilter';
+import { CamelLspServerDownloader } from './CamelLspServerDownloader';
 
 const LANGUAGE_CLIENT_ID = 'LANGUAGE_ID_APACHE_CAMEL_KAOTO';
 const LANGUAGE_CLIENT_NAME = 'Camel Language Server (Kaoto)';
@@ -27,18 +29,27 @@ const LANGUAGE_CLIENT_NAME = 'Camel Language Server (Kaoto)';
 type StatusBarState = 'starting' | 'running' | 'error';
 
 /**
- * Manages the lifecycle of the Camel Language Server: Java detection, JAR resolution,
+ * Manages the lifecycle of the Camel Language Server: Java detection, JAR resolution
+ * (the JAR set in the settings, or the release downloaded on first use),
  * and starting/stopping the underlying `LanguageClient`.
  */
 export class CamelLanguageServerManager {
 	static readonly REQUIRED_JAVA_VERSION = 17;
-	static readonly JAR_NAME = 'language-server.jar';
 
 	private languageClient: LanguageClient | undefined;
 	private statusBarItem: vscode.StatusBarItem | undefined;
 	private fileWatchers: vscode.FileSystemWatcher[] = [];
+	private readonly retryRequested = new vscode.EventEmitter<void>();
 
-	constructor(private readonly context: vscode.ExtensionContext) {}
+	/** Fires when the user asks to retry a failed download of the server. */
+	readonly onDidRequestRetry = this.retryRequested.event;
+
+	constructor(
+		private readonly context: vscode.ExtensionContext,
+		private readonly downloader = new CamelLspServerDownloader(context.globalStorageUri.fsPath),
+	) {
+		context.subscriptions.push(this.retryRequested);
+	}
 
 	/**
 	 * Start the Camel Language Server.
@@ -60,9 +71,9 @@ export class CamelLanguageServerManager {
 			return;
 		}
 
-		const jarPath = this.resolveJarPath();
+		const jarPath = await this.resolveJarPath();
 		if (!jarPath) {
-			KaotoOutputChannel.logError('Camel LSP server JAR not found. LSP features will not be available.');
+			this.updateStatusBar('error');
 			return;
 		}
 
@@ -193,22 +204,62 @@ export class CamelLanguageServerManager {
 		});
 	}
 
-	private resolveJarPath(): string | undefined {
-		const jarPath = path.join(this.context.extensionPath, 'jars', CamelLanguageServerManager.JAR_NAME);
-		if (fs.existsSync(jarPath)) {
-			return jarPath;
+	/**
+	 * @returns the JAR set in the settings, or the released JAR, downloaded first when needed;
+	 * undefined, after reporting the problem, when there is no JAR to run
+	 */
+	private async resolveJarPath(): Promise<string | undefined> {
+		const configuredJar = vscode.workspace.getConfiguration().get<string>(KAOTO_LSP_SERVER_JAR_SETTING_ID, '').trim();
+		if (configuredJar) {
+			if (fs.existsSync(configuredJar)) {
+				return configuredJar;
+			}
+			const msg = `The Camel Language Server JAR set in ${KAOTO_LSP_SERVER_JAR_SETTING_ID} does not exist: ${configuredJar}`;
+			KaotoOutputChannel.logError(msg);
+			void vscode.window.showErrorMessage(msg);
+			return undefined;
 		}
 
-		// Also check dist/jars (webpack bundle location)
-		const distJarPath = path.join(this.context.extensionPath, 'dist', 'jars', CamelLanguageServerManager.JAR_NAME);
-		if (fs.existsSync(distJarPath)) {
-			return distJarPath;
+		try {
+			return await this.downloadServerJar();
+		} catch (error) {
+			const reason = error instanceof Error ? error.message : String(error);
+			const msg = `Could not download Camel Language Server ${this.downloader.getVersion()}: ${reason}`;
+			KaotoOutputChannel.logError(msg);
+			void vscode.window.showErrorMessage(msg, 'Retry').then((selection) => {
+				if (selection === 'Retry') {
+					this.retryRequested.fire();
+				}
+			});
+			return undefined;
+		}
+	}
+
+	private async downloadServerJar(): Promise<string> {
+		if (this.downloader.isDownloaded()) {
+			return this.downloader.ensureServerJar();
 		}
 
-		return undefined;
+		const url = this.downloader.getDownloadUrl();
+		KaotoOutputChannel.logInfo(`Downloading Camel Language Server ${this.downloader.getVersion()} from ${url}`);
+		return vscode.window.withProgress(
+			{ location: vscode.ProgressLocation.Notification, title: `Downloading Camel Language Server ${this.downloader.getVersion()}` },
+			(progress) => {
+				let reportedPercent = 0;
+				return this.downloader.ensureServerJar((receivedBytes, totalBytes) => {
+					const percent = totalBytes ? Math.floor((receivedBytes / totalBytes) * 100) : 0;
+					if (percent > reportedPercent) {
+						progress.report({ increment: percent - reportedPercent, message: `${percent}%` });
+						reportedPercent = percent;
+					}
+				});
+			},
+		);
 	}
 
 	private createStatusBar(): void {
+		// a start after a failed one replaces the status of the failure
+		this.statusBarItem?.dispose();
 		this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, Number.MIN_VALUE);
 		this.statusBarItem.name = 'Camel Language Server';
 		this.context.subscriptions.push(this.statusBarItem);

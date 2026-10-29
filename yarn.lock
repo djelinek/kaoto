@@ -19582,43 +19582,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mvn-artifact-download@npm:^6.1.2":
-  version: 6.1.2
-  resolution: "mvn-artifact-download@npm:6.1.2"
-  dependencies:
-    mvn-artifact-filename: "npm:^6.1.2"
-    mvn-artifact-name-parser: "npm:^6.1.2"
-    mvn-artifact-url: "npm:^6.1.2"
-    node-fetch: "npm:^2.6.1"
-  checksum: 10/99f9200bcc5eaea94c570c40573557fe391f1d1f8e6f45c989ae20dc4e20ac0db190eb673bdfa71c897de7b99c148dd30a1a3202a59471561c4917ab0c19cb42
-  languageName: node
-  linkType: hard
-
-"mvn-artifact-filename@npm:^6.1.2":
-  version: 6.1.2
-  resolution: "mvn-artifact-filename@npm:6.1.2"
-  checksum: 10/6d66868f163dcd8cc960a8bf5f365b24cd3bb65125e2afa7e463dbf867aa365790dc6529116e969759a893c01595506cdd012c94c6f8a8905f7b4902c39afea2
-  languageName: node
-  linkType: hard
-
-"mvn-artifact-name-parser@npm:^6.1.2":
-  version: 6.1.2
-  resolution: "mvn-artifact-name-parser@npm:6.1.2"
-  checksum: 10/f53b115b1506e09f5f5b79ba8ad19623474e52c6d8c3388781c044e916b3f55f4915a85c8d3151490779cba3e97944f4dfd586b4888bf0ab9747a79a30c6c045
-  languageName: node
-  linkType: hard
-
-"mvn-artifact-url@npm:^6.1.2":
-  version: 6.1.2
-  resolution: "mvn-artifact-url@npm:6.1.2"
-  dependencies:
-    mvn-artifact-filename: "npm:^6.1.2"
-    node-fetch: "npm:^2.6.1"
-    xml2js: "npm:^0.5.0"
-  checksum: 10/225cac1cee0ff3621d4a0bcbad19085e5df738b419cf2a7cf89e9f159eb5293786584e89365ced7e639248bb4c945e74417a9792d0e06bff51790daef13304b9
-  languageName: node
-  linkType: hard
-
 "nanoid@npm:^3.3.11":
   version: 3.3.11
   resolution: "nanoid@npm:3.3.11"
@@ -19754,7 +19717,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-fetch@npm:^2.6.1, node-fetch@npm:^2.6.12, node-fetch@npm:^2.6.7":
+"node-fetch@npm:^2.6.12, node-fetch@npm:^2.6.7":
   version: 2.7.0
   resolution: "node-fetch@npm:2.7.0"
   dependencies:
@@ -26186,7 +26149,6 @@ __metadata:
     eslint-plugin-simple-import-sort: "npm:^14.0.0"
     get-port-please: "npm:^3.2.0"
     mocha: "npm:^11.8.0"
-    mvn-artifact-download: "npm:^6.1.2"
     os-browserify: "npm:^0.3.0"
     ovsx: "npm:^1.1.1"
     path-browserify: "npm:^1.0.1"

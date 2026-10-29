@@ -42,8 +42,4 @@ suite('CamelLanguageServerManager', () => {
 		// but we can verify the static methods work correctly
 		expect(CamelLanguageServerManager.REQUIRED_JAVA_VERSION).to.equal(17);
 	});
-
-	test('JAR_NAME constant should be language-server.jar', () => {
-		expect(CamelLanguageServerManager.JAR_NAME).to.equal('language-server.jar');
-	});
 });

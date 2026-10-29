@@ -42,8 +42,6 @@ yarn-error.log*
 
 *.vsix
 
-jars/*.jar
-
 # the camel-jbang folders
 .camel-jbang
 .camel-jbang-run

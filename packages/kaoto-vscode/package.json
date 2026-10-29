@@ -18,7 +18,6 @@
     "build:dev": "rimraf dist && yarn run watch && yarn run lint",
     "build:test:unit": "tsc --project tsconfig.unit-tests.json && vite build --config vite.config.unit-tests.mjs",
     "build:vsix": "yarn vsce package --no-dependencies --yarn",
-    "postinstall": "node ./scripts/download-camel-lsp.js",
     "compile": "webpack",
     "sbom:generate": "cdxgen -o manifest.json",
     "watch": "webpack --env dev",
@@ -63,7 +62,6 @@
     "eslint-plugin-prettier": "^5.5.6",
     "eslint-plugin-simple-import-sort": "^14.0.0",
     "mocha": "^11.8.0",
-    "mvn-artifact-download": "^6.1.2",
     "os-browserify": "^0.3.0",
     "ovsx": "^1.1.1",
     "path-browserify": "^1.0.1",
@@ -1382,9 +1380,16 @@
           "kaoto.lsp.enabled": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Enable Camel Language Server for source code features (completion, validation, hover). Requires Java 17+ on the system PATH or JAVA_HOME.",
+            "markdownDescription": "Enable Camel Language Server for source code features (completion, validation, hover). Requires Java 17+ on the system PATH or JAVA_HOME. The server starts when a Camel route, Kamelet or Pipe file is opened, and is downloaded from Maven Central the first time.",
             "scope": "window",
             "order": 0
+          },
+          "kaoto.lsp.serverJarPath": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "Path to a Camel Language Server JAR to run instead of the release that Kaoto downloads, for example a local build. Leave empty to use the downloaded release.",
+            "scope": "machine",
+            "order": 1
           },
           "kaoto.lsp.extraComponents": {
             "type": "array",
