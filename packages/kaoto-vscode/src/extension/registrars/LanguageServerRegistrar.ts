@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import * as vscode from 'vscode';
-import { KAOTO_LSP_ENABLED_SETTING_ID, KAOTO_LSP_SERVER_JAR_SETTING_ID } from '../../constants';
+import { KAOTO_LSP_ENABLED_SETTING_ID, KAOTO_LSP_SERVER_JAR_SETTING_ID, KAOTO_LSP_USE_LATEST_SNAPSHOT_SETTING_ID } from '../../constants';
 import { CamelLanguageServerManager } from '../../lsp/CamelLanguageServerManager';
 import { CamelLspConfigurationSync } from '../../lsp/CamelLspConfigurationSync';
 import { isCamelLspDocument } from '../../lsp/CamelLspDocumentFilter';
@@ -52,7 +52,10 @@ export class LanguageServerRegistrar implements IRegistrar {
 						KaotoOutputChannel.logInfo('Camel Language Server disabled, stopping...');
 						await this.lspManager.stop();
 					}
-				} else if (event.affectsConfiguration(KAOTO_LSP_SERVER_JAR_SETTING_ID) && LanguageServerRegistrar.isEnabled()) {
+				} else if (
+					(event.affectsConfiguration(KAOTO_LSP_SERVER_JAR_SETTING_ID) || event.affectsConfiguration(KAOTO_LSP_USE_LATEST_SNAPSHOT_SETTING_ID)) &&
+					LanguageServerRegistrar.isEnabled()
+				) {
 					if (this.lspManager?.isRunning()) {
 						KaotoOutputChannel.logInfo('Camel Language Server JAR changed, restarting...');
 						await this.lspManager.stop();

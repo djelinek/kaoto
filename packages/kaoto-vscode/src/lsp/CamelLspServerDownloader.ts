@@ -15,6 +15,7 @@
  */
 import * as crypto from 'crypto'; // NOSONAR
 import * as fs from 'fs'; // NOSONAR
+import type { IncomingMessage } from 'http'; // NOSONAR
 import * as https from 'https'; // NOSONAR
 import * as path from 'path'; // NOSONAR
 import { pipeline } from 'stream/promises'; // NOSONAR
@@ -28,12 +29,25 @@ const CAMEL_LSP_SERVER_SHA256 = 'fdae586f74afcec5cd2c55f19343f870c88f3613e418fd3
 
 const MAVEN_CENTRAL_URL = 'https://repo1.maven.org/maven2/com/github/camel-tooling/camel-lsp-server';
 const DOWNLOAD_TIMEOUT_MS = 60_000;
+const FETCH_TIMEOUT_MS = 10_000;
 const MAX_REDIRECTS = 5;
+// the Maven Central snapshot repository answers 403 Forbidden to requests without a User-Agent
+const USER_AGENT = 'vscode-kaoto';
+const HASH_NAMES = { sha1: 'SHA-1', sha256: 'SHA-256' };
 
 /** Reports the bytes received so far, and the total size when the server sends it. */
 export type DownloadProgress = (receivedBytes: number, totalBytes: number | undefined) => void;
 
 export type FileDownload = (url: string, targetPath: string, onProgress?: DownloadProgress) => Promise<void>;
+
+/** Reads a small text file, such as Maven metadata or a checksum. */
+export type TextFetch = (url: string) => Promise<string>;
+
+/** The hash that a downloaded file must have. */
+export interface Checksum {
+	algorithm: keyof typeof HASH_NAMES;
+	value: string;
+}
 
 /**
  * Downloads the Camel Language Server JAR from Maven Central into the extension storage, once per release.
@@ -76,48 +90,91 @@ export class CamelLspServerDownloader {
 			return jarPath;
 		}
 
-		await fs.promises.mkdir(path.dirname(jarPath), { recursive: true });
-		// download next to the JAR, so that an interrupted download is never taken for the JAR
-		const partPath = `${jarPath}.part`;
-		const url = this.getDownloadUrl();
-		try {
-			await this.download(url, partPath, onProgress);
-			const actualSha256 = await computeSha256(partPath);
-			if (actualSha256 !== this.sha256) {
-				throw new Error(`Checksum mismatch for ${url}: expected SHA-256 ${this.sha256}, got ${actualSha256}`);
-			}
-			await fs.promises.rename(partPath, jarPath);
-		} catch (error) {
-			await fs.promises.rm(partPath, { force: true });
-			throw error;
-		}
-
-		await this.removeOtherVersions();
+		await downloadVerifiedFile(this.download, this.getDownloadUrl(), jarPath, { algorithm: 'sha256', value: this.sha256 }, onProgress);
+		await removeOtherVersions(this.serverDir, this.version);
 		return jarPath;
 	}
+}
 
-	private async removeOtherVersions(): Promise<void> {
-		try {
-			const entries = await fs.promises.readdir(this.serverDir, { withFileTypes: true });
-			const otherVersions = entries.filter((entry) => entry.isDirectory() && entry.name !== this.version);
-			await Promise.all(otherVersions.map((entry) => fs.promises.rm(path.join(this.serverDir, entry.name), { recursive: true, force: true })));
-		} catch {
-			// the previous releases only take disk space, they are removed on the next download
+/**
+ * Downloads a file, and keeps it only when its hash matches the checksum.
+ */
+export async function downloadVerifiedFile(
+	download: FileDownload,
+	url: string,
+	targetPath: string,
+	checksum: Checksum,
+	onProgress?: DownloadProgress,
+): Promise<void> {
+	await fs.promises.mkdir(path.dirname(targetPath), { recursive: true });
+	// download next to the target, so that an interrupted download is never taken for the file
+	const partPath = `${targetPath}.part`;
+	try {
+		await download(url, partPath, onProgress);
+		const actualHash = await computeHash(partPath, checksum.algorithm);
+		if (actualHash !== checksum.value) {
+			const hashName = HASH_NAMES[checksum.algorithm];
+			throw new Error(`Checksum mismatch for ${url}: expected ${hashName} ${checksum.value}, got ${actualHash}`);
 		}
+		await fs.promises.rename(partPath, targetPath);
+	} catch (error) {
+		await fs.promises.rm(partPath, { force: true });
+		throw error;
+	}
+}
+
+/**
+ * Removes the directories of the other versions in a directory that has one directory per version.
+ */
+export async function removeOtherVersions(dir: string, keptVersion: string): Promise<void> {
+	try {
+		const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+		const otherVersions = entries.filter((entry) => entry.isDirectory() && entry.name !== keptVersion);
+		await Promise.all(otherVersions.map((entry) => fs.promises.rm(path.join(dir, entry.name), { recursive: true, force: true })));
+	} catch {
+		// the other versions only take disk space, they are removed on the next download
 	}
 }
 
 /**
  * Downloads a file over HTTPS, following redirects.
  */
-export function downloadFile(url: string, targetPath: string, onProgress?: DownloadProgress, redirects = MAX_REDIRECTS): Promise<void> {
+export async function downloadFile(url: string, targetPath: string, onProgress?: DownloadProgress): Promise<void> {
+	const response = await get(url, DOWNLOAD_TIMEOUT_MS);
+	const totalBytes = Number(response.headers['content-length']) || undefined;
+	let receivedBytes = 0;
+	response.on('data', (chunk: Buffer) => {
+		receivedBytes += chunk.length;
+		onProgress?.(receivedBytes, totalBytes);
+	});
+	await pipeline(response, fs.createWriteStream(targetPath));
+}
+
+/**
+ * Reads a text file over HTTPS, following redirects.
+ */
+export async function fetchText(url: string): Promise<string> {
+	const response = await get(url, FETCH_TIMEOUT_MS);
+	// decoded only at the end: the network inspection of Node, on in a debugged extension host, fails on text chunks
+	const chunks: Buffer[] = [];
+	for await (const chunk of response) {
+		chunks.push(chunk);
+	}
+	return Buffer.concat(chunks).toString('utf8');
+}
+
+/**
+ * Sends a GET request over HTTPS, following redirects.
+ * @returns the response of the last URL, rejected unless it is 200 OK or when no data comes for the timeout
+ */
+function get(url: string, timeoutMs: number, redirects = MAX_REDIRECTS): Promise<IncomingMessage> {
 	return new Promise((resolve, reject) => {
-		const request = https.get(url, { timeout: DOWNLOAD_TIMEOUT_MS }, (response) => {
+		const request = https.get(url, { timeout: timeoutMs, headers: { 'User-Agent': USER_AGENT } }, (response) => {
 			const statusCode = response.statusCode ?? 0;
 			const location = response.headers.location;
 			if (statusCode >= 300 && statusCode < 400 && location && redirects > 0) {
 				response.resume();
-				downloadFile(new URL(location, url).toString(), targetPath, onProgress, redirects - 1).then(resolve, reject);
+				get(new URL(location, url).toString(), timeoutMs, redirects - 1).then(resolve, reject);
 				return;
 			}
 			if (statusCode !== 200) {
@@ -125,22 +182,15 @@ export function downloadFile(url: string, targetPath: string, onProgress?: Downl
 				reject(new Error(`HTTP ${statusCode} for ${url}`));
 				return;
 			}
-
-			const totalBytes = Number(response.headers['content-length']) || undefined;
-			let receivedBytes = 0;
-			response.on('data', (chunk: Buffer) => {
-				receivedBytes += chunk.length;
-				onProgress?.(receivedBytes, totalBytes);
-			});
-			pipeline(response, fs.createWriteStream(targetPath)).then(resolve, reject);
+			resolve(response);
 		});
-		request.on('timeout', () => request.destroy(new Error(`No data from ${url} for ${DOWNLOAD_TIMEOUT_MS / 1000} seconds`)));
+		request.on('timeout', () => request.destroy(new Error(`No data from ${url} for ${timeoutMs / 1000} seconds`)));
 		request.on('error', reject);
 	});
 }
 
-async function computeSha256(filePath: string): Promise<string> {
-	const hash = crypto.createHash('sha256');
+async function computeHash(filePath: string, algorithm: Checksum['algorithm']): Promise<string> {
+	const hash = crypto.createHash(algorithm);
 	for await (const chunk of fs.createReadStream(filePath)) {
 		hash.update(chunk);
 	}

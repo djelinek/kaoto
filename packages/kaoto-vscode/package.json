@@ -1387,9 +1387,16 @@
           "kaoto.lsp.serverJarPath": {
             "type": "string",
             "default": "",
-            "markdownDescription": "Path to a Camel Language Server JAR to run instead of the release that Kaoto downloads, for example a local build. Leave empty to use the downloaded release.",
+            "markdownDescription": "Path to a Camel Language Server JAR to run instead of the one that Kaoto downloads, for example a local build. Leave empty to use the downloaded JAR.",
             "scope": "machine",
             "order": 1
+          },
+          "kaoto.lsp.useLatestSnapshot": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Use the latest snapshot of the Camel Language Server instead of the stable release, to try changes before they are released. Ignored when `#kaoto.lsp.serverJarPath#` is set.",
+            "scope": "machine",
+            "order": 2
           },
           "kaoto.lsp.extraComponents": {
             "type": "array",
