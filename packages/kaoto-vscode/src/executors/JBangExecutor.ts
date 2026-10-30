@@ -22,7 +22,7 @@ export class JBangExecutor extends BaseExecutor {
 	protected override async buildCommandBuilderConfig(context?: CommandContext): Promise<CommandBuilderConfig> {
 		const catalogService = KaotoCatalogService.getInstance();
 		const resourceUri = context?.cwd ? Uri.file(context.cwd) : undefined;
-		const catalog = await catalogService.getSelectedIntegrationCatalog(resourceUri);
+		const catalog = await catalogService.resolveIntegrationCatalog(context?.catalogName, resourceUri);
 
 		const rawCliVersion = catalogService.getCliVersionForJBang(catalog) || DEFAULT_CAMEL_VERSION_FALLBACK;
 		const cliVersion = context?.command === 'test' ? JBangExecutor.enforceMinVersion(rawCliVersion, MIN_CAMEL_VERSION_FOR_TEST) : rawCliVersion;

@@ -91,3 +91,7 @@ export const COMMAND_INFRASTRUCTURE_LOGS = 'kaoto.infrastructure.logs';
 export const COMMAND_INFRASTRUCTURE_COPY_URL = 'kaoto.infrastructure.copyUrl';
 
 export const COMMAND_INFRASTRUCTURE_COPY_PORT = 'kaoto.infrastructure.copyPort';
+
+export const COMMAND_RUN_CONFIGURATIONS_OPEN = 'kaoto.runConfigurations.open';
+
+export const COMMAND_RUN_CONFIGURATIONS_OPEN_FOR_TARGET = 'kaoto.runConfigurations.openForTarget';

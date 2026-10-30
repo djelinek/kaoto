@@ -158,6 +158,39 @@ const commonConfig = (env, buildInfoDefines) => {
   };
 };
 
+/**
+ * Run Configurations webview. It has its own config so that it skips the catalog copy of the
+ * common config, and uses source maps without eval, which the webview's CSP does not allow.
+ */
+const runConfigurationsConfig = (env, buildInfoDefines) => {
+  const config = commonConfig(env, buildInfoDefines);
+  return {
+    ...config,
+    target: 'web',
+    devtool: getEnvConfig(env).sourceMaps ? 'source-map' : false,
+    entry: {
+      'webview/RunConfigurationsApp': './src/webview/run-configurations/index.tsx',
+    },
+    module: {
+      rules: [
+        ...config.module.rules,
+        {
+          test: /\.css$/,
+          use: ['style-loader', 'css-loader'],
+        },
+      ],
+    },
+    plugins: [
+      new CopyPlugin({
+        patterns: ['codicon.css', 'codicon.ttf'].map((file) => ({
+          from: path.resolve(require.resolve('@vscode/codicons/package.json'), '../dist', file),
+          to: 'webview/run-configurations',
+        })),
+      }),
+    ],
+  };
+};
+
 const webpack = async (env) => {
   // @kaoto/kaoto is bundled from its sources, so its build metadata (src/version.ts) must be provided here
   const { getBuildInfoDefines } = await import('../../scripts/build-info.mjs');
@@ -176,6 +209,7 @@ const webpack = async (env) => {
         'extension/extensionWeb': './src/extension/extensionWeb.ts',
       },
     }),
+    runConfigurationsConfig(env, buildInfoDefines),
     merge(commonConfig(env, buildInfoDefines), {
       target: 'web',
       entry: {

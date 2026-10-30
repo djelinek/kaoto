@@ -14,7 +14,19 @@
  * limitations under the License.
  */
 import { KaotoOutputChannel } from '../extension/KaotoOutputChannel';
-import { ProgressLocation, ShellExecution, Task, TaskDefinition, TaskPanelKind, TaskRevealKind, tasks, TaskScope, window, WorkspaceFolder } from 'vscode';
+import {
+	ProgressLocation,
+	ShellExecution,
+	Task,
+	TaskDefinition,
+	TaskExecution,
+	TaskPanelKind,
+	TaskRevealKind,
+	tasks,
+	TaskScope,
+	window,
+	WorkspaceFolder,
+} from 'vscode';
 
 export interface CamelTaskDefinition extends TaskDefinition {
 	label: string;
@@ -86,14 +98,14 @@ export class CamelTask extends Task {
 	/**
 	 * Execute without waiting for end of the task
 	 */
-	public async execute(): Promise<void> {
+	public async execute(): Promise<TaskExecution> {
 		if (this.execution) {
 			const exec = this.execution as ShellExecution;
 			const cmd = typeof exec.command === 'string' ? exec.command : (exec.command?.value ?? '');
 			const argsStr = exec.args?.map((a) => (typeof a === 'string' ? a : a.value)).join(' ');
 			KaotoOutputChannel.logInfo(`${this.label}: "${cmd} ${argsStr}"`);
 		}
-		await tasks.executeTask(this);
+		return await tasks.executeTask(this);
 	}
 
 	private waitForCompletion(): Promise<void> {

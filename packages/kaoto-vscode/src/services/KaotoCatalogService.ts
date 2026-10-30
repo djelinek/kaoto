@@ -224,6 +224,20 @@ export class KaotoCatalogService {
 	}
 
 	/**
+	 * Get the integration catalog named by a run configuration, or the selected one when no name is given
+	 */
+	public async resolveIntegrationCatalog(catalogName: string | undefined, resourceUri?: vscode.Uri): Promise<CatalogLibraryEntry | undefined> {
+		if (catalogName) {
+			const catalog = this.findCatalogByName(catalogName);
+			if (catalog) {
+				return catalog;
+			}
+			KaotoOutputChannel.logWarning(`Catalog "${catalogName}" of the run configuration is not available. Using the selected catalog instead.`);
+		}
+		return this.getSelectedIntegrationCatalog(resourceUri);
+	}
+
+	/**
 	 * Get the selected test catalog for a workspace, or default if none selected
 	 */
 	public async getSelectedTestCatalog(resourceUri?: vscode.Uri): Promise<CatalogLibraryEntry | undefined> {

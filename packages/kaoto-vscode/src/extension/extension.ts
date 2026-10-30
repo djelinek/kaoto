@@ -36,6 +36,7 @@ import { DeploymentsRegistrar } from './registrars/DeploymentsRegistrar';
 import { TestsRegistrar } from './registrars/TestsRegistrar';
 import { InfrastructureRegistrar } from './registrars/InfrastructureRegistrar';
 import { OpenApiRegistrar } from './registrars/OpenApiRegistrar';
+import { RunConfigurationsRegistrar } from './registrars/RunConfigurationsRegistrar';
 
 let backendProxy: VsCodeBackendProxy;
 let telemetryService: TelemetryService;
@@ -96,6 +97,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		new EditorRegistrar(context, kieEditorStore, telemetryService),
 		new IntegrationsRegistrar(context, telemetryService, portManager),
 		new DeploymentsRegistrar(context, telemetryService, portManager),
+		new RunConfigurationsRegistrar(context, telemetryService, portManager),
 		new InfrastructureRegistrar(context, telemetryService),
 		new TestsRegistrar(context, telemetryService),
 		new OpenApiRegistrar(context, telemetryService),

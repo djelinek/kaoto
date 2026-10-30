@@ -22,6 +22,10 @@ export abstract class BaseExecutor implements ICamelExecutor {
 			throw new Error(`Executor ${this.config.type} is not available`);
 		}
 
+		return this.buildCommand(command, args, context);
+	}
+
+	async buildCommand(command: CamelCommand, args: CommandArguments, context?: CommandContext): Promise<CommandResult> {
 		const builderConfig = await this.buildCommandBuilderConfig({ ...context, command });
 		const builder = new CamelCommandBuilder(builderConfig);
 		return builder.buildCommand(command, args, context);

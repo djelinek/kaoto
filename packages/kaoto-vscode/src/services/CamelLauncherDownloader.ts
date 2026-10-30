@@ -41,7 +41,7 @@ export class CamelLauncherDownloader {
 	 */
 	async ensureLauncher(version: string): Promise<string> {
 		const launcherDir = this.getLauncherDirectory(version);
-		const jarPath = path.join(launcherDir, `camel-launcher-${version}.jar`);
+		const jarPath = this.getLauncherJarPath(version);
 
 		// Check if JAR already exists
 		if (fs.existsSync(jarPath)) {
@@ -139,6 +139,13 @@ export class CamelLauncherDownloader {
 					reject(error);
 				});
 		});
+	}
+
+	/**
+	 * Get the path of the Camel Launcher JAR for a version, whether it is downloaded or not
+	 */
+	getLauncherJarPath(version: string): string {
+		return path.join(this.getLauncherDirectory(version), `camel-launcher-${version}.jar`);
 	}
 
 	/**

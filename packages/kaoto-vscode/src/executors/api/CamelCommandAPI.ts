@@ -13,11 +13,22 @@ import {
 	InfraServiceDefinition,
 	RuntimeType,
 } from '../types/ExecutorTypes';
-import { CamelSettingsHelper } from '../helpers/CamelSettingsHelper';
+import { CamelSettingsHelper, CamelSettingsOverrides } from '../helpers/CamelSettingsHelper';
 import { TestFolderResolver } from '../../services/TestFolderResolver';
 import { arePathsEqual } from '../../utils/Path';
+import { ArgumentConflict } from '../../utils/ArgumentConflictDetector';
 import { KAOTO_EXECUTOR_INFRA_ARGUMENTS_SETTING_ID } from '../../constants';
 import { KaotoOutputChannel } from '../../extension/KaotoOutputChannel';
+
+/**
+ * Values of a run configuration that replace the user settings for one command
+ */
+export interface CamelCommandOverrides extends CamelSettingsOverrides {
+	/** Environment variables added to the task's shell */
+	readonly env?: Record<string, string>;
+	/** Only build the command, for a preview: the executor is not checked or downloaded and no notification is shown */
+	readonly preview?: boolean;
+}
 
 interface ResolvedSettings {
 	camelVersionArg: string;
@@ -56,6 +67,31 @@ export class CamelCommandAPI {
 		return result;
 	}
 
+	/**
+	 * Build the command through the executor of the run configuration, or the configured one when there are no overrides
+	 */
+	private static async buildCommand(
+		command: CamelCommand,
+		args: CommandArguments,
+		cwd: string | undefined,
+		overrides: CamelCommandOverrides,
+	): Promise<CommandResult> {
+		const executorOverrides = { type: overrides.executorType, catalogName: overrides.catalogName };
+		const context = { cwd, env: overrides.env, catalogName: overrides.catalogName };
+		if (overrides.preview) {
+			const previewExecutor = await CamelExecutorFactory.createPreviewExecutor(executorOverrides);
+			return await previewExecutor.buildCommand(command, args, context);
+		}
+		const executor = await CamelExecutorFactory.createExecutor(executorOverrides);
+		return await executor.execute(command, args, context);
+	}
+
+	private static async showConflictWarnings(settingsHelper: CamelSettingsHelper, conflicts: ArgumentConflict[], overrides: CamelCommandOverrides) {
+		if (!overrides.preview) {
+			await settingsHelper.showConflictWarnings(conflicts);
+		}
+	}
+
 	private static async executeSimple(command: CamelCommand, args: CommandArguments, cwd?: string): Promise<CommandResult> {
 		const executor = await CamelExecutorFactory.createExecutor();
 		return await executor.execute(command, args, { cwd });
@@ -91,16 +127,21 @@ export class CamelCommandAPI {
 	/**
 	 * Run a Camel integration with user settings
 	 */
-	static async run(filePath: string, cwd: string, port?: number, additionalArgs: CommandArguments = []): Promise<CommandResult> {
-		const executor = await CamelExecutorFactory.createExecutor();
-		const settingsHelper = new CamelSettingsHelper();
+	static async run(
+		filePath: string,
+		cwd: string,
+		port?: number,
+		additionalArgs: CommandArguments = [],
+		overrides: CamelCommandOverrides = {},
+	): Promise<CommandResult> {
+		const settingsHelper = new CamelSettingsHelper(overrides);
 
 		const { args: userArgs, conflicts } = await settingsHelper.getRunArguments(filePath, cwd);
 		const { argument: portArg, resolvedPort } = settingsHelper.getPortArgument(port, userArgs);
 		const runtimeArg = settingsHelper.getRuntimeArgument(userArgs);
 		const common = await this.resolveCommonSettings(settingsHelper, userArgs);
 
-		await settingsHelper.showConflictWarnings(conflicts);
+		await this.showConflictWarnings(settingsHelper, conflicts, overrides);
 
 		const args: CommandArguments = CamelCommandBuilder.filterEmptyArgs([
 			sq(filePath),
@@ -111,23 +152,27 @@ export class CamelCommandAPI {
 			...this.quoteCommonSettings(common),
 		]);
 
-		const result = await executor.execute('run', args, { cwd });
+		const result = await this.buildCommand('run', args, cwd, overrides);
 		return this.applyPortOverride(result, portArg, resolvedPort);
 	}
 
 	/**
 	 * Run a Camel integration from source directory with user settings
 	 */
-	static async runSourceDir(sourceDir: string, port?: number, additionalArgs: CommandArguments = []): Promise<CommandResult> {
-		const executor = await CamelExecutorFactory.createExecutor();
-		const settingsHelper = new CamelSettingsHelper();
+	static async runSourceDir(
+		sourceDir: string,
+		port?: number,
+		additionalArgs: CommandArguments = [],
+		overrides: CamelCommandOverrides = {},
+	): Promise<CommandResult> {
+		const settingsHelper = new CamelSettingsHelper(overrides);
 
 		const { args: userArgs, conflicts } = await settingsHelper.getRunSourceDirArguments(sourceDir);
 		const { argument: portArg, resolvedPort } = settingsHelper.getPortArgument(port, userArgs);
 		const runtimeArg = settingsHelper.getRuntimeArgument(userArgs);
 		const common = await this.resolveCommonSettings(settingsHelper, userArgs);
 
-		await settingsHelper.showConflictWarnings(conflicts);
+		await this.showConflictWarnings(settingsHelper, conflicts, overrides);
 
 		const args: CommandArguments = CamelCommandBuilder.filterEmptyArgs([
 			sq(`--source-dir=${sourceDir}`),
@@ -138,7 +183,7 @@ export class CamelCommandAPI {
 			...this.quoteCommonSettings(common),
 		]);
 
-		const result = await executor.execute('run', args, { cwd: sourceDir });
+		const result = await this.buildCommand('run', args, sourceDir, overrides);
 		return this.applyPortOverride(result, portArg, resolvedPort);
 	}
 
@@ -159,14 +204,14 @@ export class CamelCommandAPI {
 		cwd: string,
 		kubernetes?: boolean,
 		additionalArgs: CommandArguments = [],
+		overrides: CamelCommandOverrides = {},
 	): Promise<CommandResult> {
-		const executor = await CamelExecutorFactory.createExecutor();
-		const settingsHelper = new CamelSettingsHelper();
+		const settingsHelper = new CamelSettingsHelper(overrides);
 
 		const { args: userArgs, conflicts } = await settingsHelper.getExportArguments(cwd);
 		const common = await this.resolveCommonSettings(settingsHelper, userArgs);
 
-		await settingsHelper.showConflictWarnings(conflicts);
+		await this.showConflictWarnings(settingsHelper, conflicts, overrides);
 
 		const relPath = relative(cwd, filePath);
 		const relativeFilePath = !relPath || relPath === '.' ? '.' : relPath;
@@ -185,9 +230,9 @@ export class CamelCommandAPI {
 		]);
 
 		if (kubernetes) {
-			return await executor.execute('kubernetes', ['export', ...args], { cwd });
+			return await this.buildCommand('kubernetes', ['export', ...args], cwd, overrides);
 		} else {
-			return await executor.execute('export', args, { cwd });
+			return await this.buildCommand('export', args, cwd, overrides);
 		}
 	}
 
@@ -262,15 +307,19 @@ export class CamelCommandAPI {
 	/**
 	 * Execute Kubernetes run operation with user settings
 	 */
-	static async kubernetesRun(filePattern: string, cwd?: string, additionalArgs: CommandArguments = []): Promise<CommandResult> {
-		const executor = await CamelExecutorFactory.createExecutor();
-		const settingsHelper = new CamelSettingsHelper();
+	static async kubernetesRun(
+		filePattern: string,
+		cwd?: string,
+		additionalArgs: CommandArguments = [],
+		overrides: CamelCommandOverrides = {},
+	): Promise<CommandResult> {
+		const settingsHelper = new CamelSettingsHelper(overrides);
 
 		const { args: userArgs, conflicts } = await settingsHelper.getKubernetesRunArguments(cwd || '');
 		const runtimeArg = settingsHelper.getRuntimeArgument(userArgs);
 		const common = await this.resolveCommonSettings(settingsHelper, userArgs);
 
-		await settingsHelper.showConflictWarnings(conflicts);
+		await this.showConflictWarnings(settingsHelper, conflicts, overrides);
 
 		const args: CommandArguments = CamelCommandBuilder.filterEmptyArgs([
 			'run',
@@ -280,7 +329,7 @@ export class CamelCommandAPI {
 			...this.quoteCommonSettings(common),
 			...additionalArgs,
 		]);
-		return await executor.execute('kubernetes', args, { cwd });
+		return await this.buildCommand('kubernetes', args, cwd, overrides);
 	}
 
 	/**

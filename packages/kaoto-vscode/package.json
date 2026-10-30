@@ -35,6 +35,9 @@
     "@kie-tools-core/vscode-extension": "10.0.0",
     "@redhat-developer/vscode-extension-proposals": "^0.0.23",
     "@redhat-developer/vscode-redhat-telemetry": "^0.10.2",
+    "@vscode-elements/elements": "^2.5.1",
+    "@vscode-elements/react-elements": "^2.4.0",
+    "@vscode/codicons": "^0.0.45",
     "compare-versions": "^6.1.1",
     "dompurify": "3.3.2",
     "get-port-please": "^3.2.0",
@@ -120,7 +123,9 @@
     "workspaceContains:**/*.citrus.it.yaml",
     "workspaceContains:**/*.citrus-test.yaml",
     "workspaceContains:**/*.citrus-it.yaml",
-    "onStartupFinished"
+    "onStartupFinished",
+    "onDebugResolve:kaoto",
+    "onDebugDynamicConfigurations:kaoto"
   ],
   "capabilities": {
     "untrustedWorkspaces": {
@@ -596,6 +601,18 @@
         "title": "Import",
         "category": "Kaoto",
         "icon": "$(symbol-reference)"
+      },
+      {
+        "command": "kaoto.runConfigurations.open",
+        "title": "Edit Run Configurations",
+        "category": "Kaoto",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "kaoto.runConfigurations.openForTarget",
+        "title": "Run Configuration...",
+        "category": "Kaoto",
+        "icon": "$(gear)"
       }
     ],
     "keybindings": [
@@ -640,6 +657,14 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "kaoto.runConfigurations.open",
+          "when": "!virtualWorkspace"
+        },
+        {
+          "command": "kaoto.runConfigurations.openForTarget",
+          "when": "false"
+        },
         {
           "command": "kaoto.selectCamelCatalog",
           "when": "false"
@@ -820,7 +845,19 @@
           "group": "1_belowOpenWith"
         }
       ],
+      "editor/title/run": [
+        {
+          "command": "kaoto.runConfigurations.openForTarget",
+          "when": "!virtualWorkspace && (resourceFilename =~ /\\.(camel|pipe)\\.yaml$/ || resourceFilename =~ /\\-pipe\\.yaml$/ || resourceFilename =~ /\\.camel\\.xml$/)",
+          "group": "kaoto@1"
+        }
+      ],
       "view/title": [
+        {
+          "command": "kaoto.runConfigurations.open",
+          "group": "navigation@5",
+          "when": "view == kaoto.integrations && !virtualWorkspace && workspaceFolderCount > 0"
+        },
         {
           "command": "kaoto.integrations.run.workspace",
           "group": "navigation@1",
@@ -888,6 +925,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "kaoto.runConfigurations.openForTarget",
+          "when": "view == kaoto.integrations && (viewItem == integration || viewItem == integration-standalone-child || viewItem == folder) && !virtualWorkspace",
+          "group": "navigation@0"
+        },
         {
           "command": "kaoto.integrations.run.folder",
           "when": "view == kaoto.integrations && viewItem == folder && !virtualWorkspace && kaoto.executorAvailable",
@@ -1010,6 +1052,196 @@
         }
       ]
     },
+    "debuggers": [
+      {
+        "type": "kaoto",
+        "label": "Kaoto (Apache Camel)",
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "run",
+                  "export",
+                  "deploy"
+                ],
+                "enumDescriptions": [
+                  "Run the integration locally (camel run).",
+                  "Export a Maven project (camel export or camel kubernetes export).",
+                  "Run the integration on Kubernetes or OpenShift (camel kubernetes run)."
+                ],
+                "default": "run",
+                "description": "What the configuration does."
+              },
+              "target": {
+                "type": "string",
+                "default": "${file}",
+                "description": "Camel file or folder. A folder runs or exports all of its Camel files."
+              },
+              "executor": {
+                "type": "string",
+                "enum": [
+                  "jbang",
+                  "camel-launcher",
+                  "kompanion"
+                ],
+                "enumDescriptions": [
+                  "Camel CLI through JBang.",
+                  "Camel Launcher JAR, downloaded on first use.",
+                  "Kaoto Kompanion. Preview only: it cannot launch yet."
+                ],
+                "description": "What runs the command. Defaults to the kaoto.executor.type setting."
+              },
+              "catalog": {
+                "type": "string",
+                "description": "Kaoto catalog name, for example \"Camel Main 4.14.9\". Defaults to the catalog selected in the status bar."
+              },
+              "dev": {
+                "type": "boolean",
+                "description": "Reload the routes when a source file changes (--dev). Defaults to the arguments setting of the action."
+              },
+              "loggingLevel": {
+                "type": "string",
+                "enum": [
+                  "trace",
+                  "debug",
+                  "info",
+                  "warn",
+                  "error",
+                  "off"
+                ],
+                "description": "Logging level of the run (--logging-level)."
+              },
+              "debugRoutes": {
+                "type": "boolean",
+                "default": false,
+                "description": "Run: Start Debugging (F5) also attaches the Camel route debugger (--dep=org.apache.camel:camel-debug). Needs the Debug Adapter for Apache Camel."
+              },
+              "managementPort": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535,
+                "description": "Port of the Camel console that the Deployments view reads. A free port is picked at each launch when it is missing."
+              },
+              "propertiesFiles": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Properties files of the run (--properties)."
+              },
+              "dependencies": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Extra dependencies of the run (--dep)."
+              },
+              "localKameletDirectories": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Local Kamelet directories (--local-kamelet-dir). Defaults to the kaoto.localKameletDirectories setting."
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Environment variables of the task's shell."
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Extra arguments, appended unchanged. Defaults to the other arguments of the action's arguments setting."
+              },
+              "runtime": {
+                "type": "string",
+                "enum": [
+                  "quarkus",
+                  "spring-boot",
+                  "camel-main"
+                ],
+                "description": "Runtime of the exported project (--runtime). Defaults to the runtime of the catalog."
+              },
+              "gav": {
+                "type": "string",
+                "default": "com.acme:myproject:1.0-SNAPSHOT",
+                "description": "Maven coordinates of the exported project (--gav)."
+              },
+              "outputDirectory": {
+                "type": "string",
+                "description": "Folder of the exported project (--directory). Defaults to the workspace folder, exported in place. Any other folder is emptied first."
+              },
+              "kubernetes": {
+                "type": "boolean",
+                "default": true,
+                "description": "Export with Kubernetes or OpenShift resources (camel kubernetes export)."
+              },
+              "clusterType": {
+                "type": "string",
+                "enum": [
+                  "openshift",
+                  "kubernetes",
+                  "minikube",
+                  "kind"
+                ],
+                "description": "Cluster type of an export with Kubernetes resources or of a deploy (--cluster-type)."
+              },
+              "openProject": {
+                "type": "boolean",
+                "default": true,
+                "description": "Open the exported project in a new window."
+              }
+            }
+          }
+        },
+        "configurationSnippets": [
+          {
+            "label": "Kaoto: Run a Camel file",
+            "description": "Run a Camel file with Camel CLI or Camel Launcher.",
+            "body": {
+              "type": "kaoto",
+              "request": "launch",
+              "name": "Run ${1:route}",
+              "action": "run",
+              "target": "^\"\\${workspaceFolder}/${1:route}.camel.yaml\"",
+              "dev": true
+            }
+          },
+          {
+            "label": "Kaoto: Export a Maven project",
+            "description": "Export Camel files to a Quarkus, Spring Boot or Camel Main Maven project.",
+            "body": {
+              "type": "kaoto",
+              "request": "launch",
+              "name": "Export ${1:myproject}",
+              "action": "export",
+              "target": "^\"\\${workspaceFolder}\"",
+              "runtime": "quarkus",
+              "gav": "com.acme:${1:myproject}:1.0-SNAPSHOT",
+              "outputDirectory": "^\"\\${workspaceFolder}/../${1:myproject}\""
+            }
+          },
+          {
+            "label": "Kaoto: Deploy to Kubernetes or OpenShift",
+            "description": "Run a Camel file on a cluster with camel kubernetes run.",
+            "body": {
+              "type": "kaoto",
+              "request": "launch",
+              "name": "Deploy ${1:route}",
+              "action": "deploy",
+              "target": "^\"\\${workspaceFolder}/${1:route}.camel.yaml\"",
+              "clusterType": "${2|openshift,kubernetes,minikube,kind|}"
+            }
+          }
+        ]
+      }
+    ],
     "submenus": [
       {
         "id": "kaoto.new.file",

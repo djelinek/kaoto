@@ -23,6 +23,20 @@ export interface ProcessedArguments {
 	conflicts: ArgumentConflict[];
 }
 
+/**
+ * Values of a run configuration that replace the settings read by this helper
+ */
+export interface CamelSettingsOverrides {
+	/** Executor type used instead of the `kaoto.executor.type` setting */
+	readonly executorType?: ExecutorType;
+	/** Kaoto catalog name used instead of the status bar selection */
+	readonly catalogName?: string;
+	/** User arguments used instead of the run, export or Kubernetes run arguments settings */
+	readonly userArguments?: string[];
+	/** Local Kamelet directories used instead of the `kaoto.localKameletDirectories` setting */
+	readonly localKameletDirectories?: string[];
+}
+
 interface CatalogContext {
 	camelVersion: string;
 	camelSpringBootVersion: string;
@@ -39,6 +53,8 @@ export class CamelSettingsHelper {
 	private catalogContext: CatalogContext | undefined;
 	private catalogContextPromise: Promise<CatalogContext> | undefined;
 
+	constructor(private readonly overrides: CamelSettingsOverrides = {}) {}
+
 	private async ensureCatalogContext(resourceUri?: Uri): Promise<CatalogContext> {
 		if (!this.catalogContextPromise) {
 			this.catalogContextPromise = this.resolveCatalogContext(resourceUri);
@@ -49,8 +65,8 @@ export class CamelSettingsHelper {
 
 	private async resolveCatalogContext(resourceUri?: Uri): Promise<CatalogContext> {
 		const catalogService = KaotoCatalogService.getInstance();
-		const catalog = await catalogService.getSelectedIntegrationCatalog(resourceUri);
-		const executorType = workspace.getConfiguration().get<ExecutorType>(KAOTO_EXECUTOR_TYPE_SETTING_ID);
+		const catalog = await catalogService.resolveIntegrationCatalog(this.overrides.catalogName, resourceUri);
+		const executorType = this.overrides.executorType ?? workspace.getConfiguration().get<ExecutorType>(KAOTO_EXECUTOR_TYPE_SETTING_ID);
 
 		return {
 			camelVersion: catalogService.getCamelVersionForCLI(catalog, executorType) || '',
@@ -64,7 +80,7 @@ export class CamelSettingsHelper {
 	async getRunArguments(filePath: string, cwd: string): Promise<ProcessedArguments> {
 		await this.ensureCatalogContext(Uri.file(filePath));
 
-		const runArgs = workspace.getConfiguration().get(KAOTO_EXECUTOR_RUN_ARGUMENTS_SETTING_ID) as string[];
+		const runArgs = this.getUserArguments(KAOTO_EXECUTOR_RUN_ARGUMENTS_SETTING_ID);
 		const xslFilteredArgs = await this.handleMissingXslFiles(filePath, runArgs);
 		const processedArgs = await this.handleLocalKameletDirArgument(xslFilteredArgs, cwd);
 
@@ -75,7 +91,7 @@ export class CamelSettingsHelper {
 	async getRunSourceDirArguments(cwd: string): Promise<ProcessedArguments> {
 		await this.ensureCatalogContext(Uri.file(cwd));
 
-		const runArgs = workspace.getConfiguration().get(KAOTO_EXECUTOR_RUN_SOURCE_DIR_ARGUMENTS_SETTING_ID) as string[];
+		const runArgs = this.getUserArguments(KAOTO_EXECUTOR_RUN_SOURCE_DIR_ARGUMENTS_SETTING_ID);
 		const processedArgs = await this.handleLocalKameletDirArgument(runArgs, cwd);
 
 		const result = ArgumentConflictDetector.mergeArguments(['--console'], processedArgs, 'runSourceDir');
@@ -85,7 +101,7 @@ export class CamelSettingsHelper {
 	async getExportArguments(cwd: string): Promise<ProcessedArguments> {
 		await this.ensureCatalogContext(Uri.file(cwd));
 
-		const exportArgs = workspace.getConfiguration().get(KAOTO_EXECUTOR_EXPORT_ARGUMENTS_SETTING_ID) as string[];
+		const exportArgs = this.getUserArguments(KAOTO_EXECUTOR_EXPORT_ARGUMENTS_SETTING_ID);
 		const processedArgs = await this.handleLocalKameletDirArgument(exportArgs, cwd);
 		return { args: processedArgs, conflicts: [] };
 	}
@@ -93,9 +109,17 @@ export class CamelSettingsHelper {
 	async getKubernetesRunArguments(cwd: string): Promise<ProcessedArguments> {
 		await this.ensureCatalogContext(Uri.file(cwd));
 
-		const kubernetesArgs = workspace.getConfiguration().get(KAOTO_EXECUTOR_KUBERNETES_RUN_ARGUMENTS_SETTING_ID) as string[];
+		const kubernetesArgs = this.getUserArguments(KAOTO_EXECUTOR_KUBERNETES_RUN_ARGUMENTS_SETTING_ID);
 		const result = ArgumentConflictDetector.mergeArguments([], kubernetesArgs, 'kubernetesRun');
 		return { args: result.merged, conflicts: result.conflicts };
+	}
+
+	/**
+	 * User arguments of a run configuration, or a copy of the given setting's value
+	 * (copied because the Kamelet directory handling rewrites entries in place).
+	 */
+	private getUserArguments(settingId: string): string[] {
+		return [...(this.overrides.userArguments ?? (workspace.getConfiguration().get(settingId) as string[]) ?? [])];
 	}
 
 	getPortArgument(port?: number, userArgs: string[] = []): { argument: string; resolvedPort: number } {
@@ -278,7 +302,8 @@ export class CamelSettingsHelper {
 	 * Resolve local kamelet directories from global setting
 	 */
 	private async resolveLocalKameletDirsFromGlobalSetting(cwd: string): Promise<string | undefined> {
-		const localKameletDirectories = workspace.getConfiguration().get(KAOTO_LOCAL_KAMELET_DIRECTORIES_SETTING_ID) as string[];
+		const localKameletDirectories =
+			this.overrides.localKameletDirectories ?? (workspace.getConfiguration().get(KAOTO_LOCAL_KAMELET_DIRECTORIES_SETTING_ID) as string[]);
 		if (localKameletDirectories.length > 0) {
 			return `--local-kamelet-dir=${Array.from(resolvePaths(localKameletDirectories, cwd)).join(',')}`;
 		}

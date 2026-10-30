@@ -1,0 +1,239 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  font-weight: var(--vscode-font-weight);
+}
+
+.app {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) 1fr;
+  height: 100vh;
+}
+
+.loading,
+.empty-content {
+  padding: 24px;
+  color: var(--vscode-descriptionForeground);
+}
+
+/* Configuration list, styled like a side bar view */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background-color: var(--vscode-sideBar-background);
+  border-right: 1px solid var(--vscode-sideBar-border, var(--vscode-panel-border));
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 35px;
+  padding: 0 8px 0 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--vscode-sideBarTitle-foreground);
+}
+
+.sidebar-list {
+  flex: 1;
+  overflow: auto;
+}
+
+.empty {
+  padding: 8px 20px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.unsaved-dot {
+  color: var(--vscode-gitDecoration-modifiedResourceForeground, var(--vscode-editorWarning-foreground));
+  font-size: 10px;
+  padding: 0 4px;
+}
+
+.running-icon {
+  color: var(--vscode-debugIcon-startForeground, var(--vscode-charts-green));
+}
+
+vscode-toolbar-button.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Form, styled like the Settings editor */
+
+.content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.form {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 24px 24px;
+}
+
+.form h1 {
+  font-size: 26px;
+  font-weight: 600;
+  margin: 8px 0 4px;
+}
+
+.form .subtitle {
+  margin: 0 0 8px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.form h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 24px 0 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--vscode-settings-headerBorder, var(--vscode-panel-border));
+}
+
+.field-control {
+  max-width: 640px;
+}
+
+.field-control vscode-textfield,
+.field-control vscode-single-select,
+.field-control vscode-textarea {
+  width: 100%;
+}
+
+.with-button {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.with-button vscode-textfield,
+.with-button vscode-single-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.field-problem {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.field-problem.error {
+  color: var(--vscode-errorForeground);
+}
+
+.field-problem.warning {
+  color: var(--vscode-editorWarning-foreground);
+}
+
+/* Command preview and actions */
+
+.footer {
+  padding: 10px 24px 14px;
+  border-top: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-sideBar-background, var(--vscode-editor-background));
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.preview-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.preview-cwd {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--vscode-descriptionForeground);
+}
+
+.command {
+  margin: 0;
+  padding: 8px 10px;
+  max-height: 96px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: var(--vscode-editor-font-family);
+  font-size: var(--vscode-editor-font-size);
+  background-color: var(--vscode-textCodeBlock-background);
+  border-radius: 4px;
+}
+
+.command.request {
+  max-height: 160px;
+  word-break: normal;
+}
+
+.preview-env {
+  margin-top: 4px;
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--vscode-editor-font-family);
+}
+
+.problems {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.problems li {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 2px 0;
+}
+
+.problems li.error vscode-icon {
+  color: var(--vscode-errorForeground);
+}
+
+.problems li.warning vscode-icon {
+  color: var(--vscode-editorWarning-foreground);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.actions .spacer {
+  flex: 1;
+}
+
+.hint {
+  margin-top: 8px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.hint a {
+  color: var(--vscode-textLink-foreground);
+}

@@ -56,7 +56,7 @@ export class CamelCommandBuilder {
 	 * ShellExecution accepts mixed (string | ShellQuotedString)[] natively.
 	 */
 	private buildExecution(executable: string, commandParts: CommandArg[], context?: CommandContext): ShellExecution {
-		return new ShellExecution(executable, commandParts, { cwd: context?.cwd });
+		return new ShellExecution(executable, commandParts, { cwd: context?.cwd, env: context?.env });
 	}
 
 	/**

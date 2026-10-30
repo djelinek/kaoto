@@ -10,6 +10,14 @@ import { KaotoCatalogService } from '../services/KaotoCatalogService';
 import { DEFAULT_CAMEL_VERSION_FALLBACK, KAOTO_EXECUTOR_TYPE_SETTING_ID } from '../constants';
 
 /**
+ * Values of a run configuration that replace the executor settings
+ */
+export interface ExecutorOverrides {
+	readonly type?: ExecutorType;
+	readonly catalogName?: string;
+}
+
+/**
  * Factory for creating executor instances
  * Type-safe and extensible
  */
@@ -30,8 +38,8 @@ export class CamelExecutorFactory {
 	/**
 	 * Create executor based on configuration
 	 */
-	static async createExecutor(): Promise<ICamelExecutor> {
-		const config = await this.loadConfiguration();
+	static async createExecutor(overrides: ExecutorOverrides = {}): Promise<ICamelExecutor> {
+		const config = await this.loadConfiguration(overrides);
 
 		// Reset cache if configuration changed
 		if (this.hasConfigChanged(config)) {
@@ -53,16 +61,28 @@ export class CamelExecutorFactory {
 	}
 
 	/**
+	 * Create an executor that only builds commands, for the run configuration preview.
+	 * It is not cached and never downloads the Camel Launcher.
+	 */
+	static async createPreviewExecutor(overrides: ExecutorOverrides = {}): Promise<ICamelExecutor> {
+		const config = await this.loadConfiguration(overrides);
+		if (config.type === 'camel-launcher') {
+			return new CamelLauncherExecutor(config, this.getDownloader().getLauncherJarPath(config.version));
+		}
+		return new JBangExecutor(config);
+	}
+
+	/**
 	 * Load configuration from VS Code settings
 	 * Version is determined from catalog selection
 	 */
-	private static async loadConfiguration(): Promise<AnyExecutorConfig> {
+	private static async loadConfiguration(overrides: ExecutorOverrides): Promise<AnyExecutorConfig> {
 		const vscodeConfig = vscode.workspace.getConfiguration();
-		const executorType = vscodeConfig.get<ExecutorType>(KAOTO_EXECUTOR_TYPE_SETTING_ID, 'jbang');
+		const executorType = overrides.type ?? vscodeConfig.get<ExecutorType>(KAOTO_EXECUTOR_TYPE_SETTING_ID, 'jbang');
 
 		// Get version from catalog service - use selected catalog, not default
 		const catalogService = KaotoCatalogService.getInstance();
-		const catalog = await catalogService.getSelectedIntegrationCatalog();
+		const catalog = await catalogService.resolveIntegrationCatalog(overrides.catalogName);
 		const version = catalogService.getCamelVersionForCLI(catalog, executorType) || DEFAULT_CAMEL_VERSION_FALLBACK;
 
 		switch (executorType) {
@@ -105,14 +125,17 @@ export class CamelExecutorFactory {
 	 * Create Camel Launcher executor, downloading the JAR if needed
 	 */
 	private static async createCamelLauncherExecutor(config: CamelLauncherExecutorConfig): Promise<ICamelExecutor> {
-		if (!this.downloader) {
-			this.downloader = new CamelLauncherDownloader(this.extensionContext);
-		}
-
-		const jarPath = await this.downloader.ensureLauncher(config.version);
+		const jarPath = await this.getDownloader().ensureLauncher(config.version);
 		KaotoOutputChannel.logInfo(`Using Camel Launcher ${config.version}: ${jarPath}`);
 
 		return new CamelLauncherExecutor(config, jarPath);
+	}
+
+	private static getDownloader(): CamelLauncherDownloader {
+		if (!this.downloader) {
+			this.downloader = new CamelLauncherDownloader(this.extensionContext);
+		}
+		return this.downloader;
 	}
 
 	/**

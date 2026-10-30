@@ -31,6 +31,10 @@ export interface CommandContext {
 	readonly cwd?: string;
 	/** The Camel command being executed (e.g. 'run', 'test'). Used by executors that need per-command version constraints. */
 	readonly command?: CamelCommand;
+	/** Environment variables added to the task's shell (set by run configurations). */
+	readonly env?: Record<string, string>;
+	/** Kaoto catalog name used instead of the status bar selection (set by run configurations). */
+	readonly catalogName?: string;
 }
 
 /**
