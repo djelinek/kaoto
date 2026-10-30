@@ -26,7 +26,7 @@ export type KaotoFolderContent = {
 /**
  * Folder item of the Kaoto Files view.
  * It keeps the Integrations view folder behavior (Maven root detection, run and export actions) and uses
- * the folder icon of the user's file icon theme like the native Explorer does.
+ * the folder icon of the user's file icon theme like the native Explorer does, also for Maven and workspace roots.
  *
  * The context value is `<folder context>;camel;tests`, where the `camel` and `tests` flags are only present
  * when the folder contains such files, for example `folder;camel` or `folder-maven-root;tests`.
@@ -35,9 +35,8 @@ export class KaotoFolder extends Folder {
 	constructor(labelName: string, folderUri: Uri, isUnderMavenRoot: boolean, isMavenRoot: boolean, isWorkspaceRoot: boolean, content: KaotoFolderContent) {
 		super(labelName, folderUri, undefined, isUnderMavenRoot, isMavenRoot, isWorkspaceRoot);
 		this.id = folderUri.toString();
-		if (!isMavenRoot) {
-			this.iconPath = isWorkspaceRoot ? new ThemeIcon('root-folder') : ThemeIcon.Folder;
-		}
+		// the file icon theme decides, so folders take the same space as in the native Explorer (no icon with Seti)
+		this.iconPath = ThemeIcon.Folder;
 		const flags = [content.hasCamelFiles ? 'camel' : undefined, content.hasTestFiles ? 'tests' : undefined].filter(Boolean);
 		this.contextValue = [this.contextValue, ...flags].join(';');
 	}
