@@ -354,7 +354,8 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 
 	private async getRouteChildren(integration: Integration): Promise<TreeItem[]> {
 		const routes = await this.integrationFiles.getRoutes(integration);
-		routes.forEach((route) => (route.iconPath = new ThemeIcon('type-hierarchy-sub')));
+		// no icon, so the route name starts right after the row indent instead of after an extra icon column
+		routes.forEach((route) => (route.iconPath = undefined));
 		routes.forEach((route, index) => {
 			route.id = `${integration.filepath.toString()}#route-${index}`;
 			this.routeParents.set(route, integration);
