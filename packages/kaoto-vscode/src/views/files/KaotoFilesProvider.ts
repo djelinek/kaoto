@@ -38,6 +38,7 @@ import { enabledGlobs, GlobExcludeMatcher } from '../../utils/Glob';
 import { File } from '../integrations/File';
 import { Integration } from '../integrations/Integration';
 import { IntegrationFiles } from '../integrations/IntegrationFiles';
+import { Route } from '../integrations/Route';
 import { OpenApiFile } from '../openapi/OpenApiFile';
 import { Test } from '../tests/Test';
 import { TestResult } from '../../types/TestTreeItemType';
@@ -94,6 +95,8 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 
 	/** tree items by id (the uri), used to find parents and to refresh single items */
 	private readonly items = new Map<string, TreeItem>();
+	/** parent integration of each route item */
+	private readonly routeParents = new WeakMap<TreeItem, Integration>();
 	/** search results of the Camel, Tests and OpenAPI filters (file system paths) */
 	private readonly matches = new Map<KaotoFilesFilter, Promise<Set<string>>>();
 	/** OpenAPI version of the files whose content is a valid OpenAPI document */
@@ -193,6 +196,9 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 			if (!element) {
 				return await this.getRootChildren();
 			}
+			if (element instanceof Integration) {
+				return await this.getRouteChildren(element);
+			}
 			if (element instanceof KaotoFolder) {
 				return await this.getFolderChildren(element.folderUri, element.isUnderMavenRoot || element.isMavenRoot, element.isWorkspaceRoot);
 			}
@@ -203,6 +209,9 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 	}
 
 	async getParent(element: TreeItem): Promise<TreeItem | undefined> {
+		if (element instanceof Route) {
+			return this.routeParents.get(element);
+		}
 		const uri = element.resourceUri;
 		if (!uri) {
 			return undefined;
@@ -253,7 +262,10 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 	// drag and drop
 
 	handleDrag(source: readonly TreeItem[], dataTransfer: DataTransfer, _token: CancellationToken): void {
-		const uris = source.map((item) => item.resourceUri).filter((uri): uri is Uri => !!uri);
+		const uris = source
+			.filter((item) => !(item instanceof Route))
+			.map((item) => item.resourceUri)
+			.filter((uri): uri is Uri => !!uri);
 		if (uris.length > 0) {
 			// lets the files be dropped into editors, the terminal or other views
 			dataTransfer.set(KaotoFilesProvider.URI_LIST_MIME_TYPE, new DataTransferItem(uris.map((uri) => uri.toString()).join('\r\n')));
@@ -280,7 +292,7 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 		if (treeTransferItem) {
 			const treeItems = Array.isArray(treeTransferItem.value) ? (treeTransferItem.value as unknown[]) : [];
 			const treeUris = treeItems
-				.filter((item): item is TreeItem => item instanceof TreeItem)
+				.filter((item): item is TreeItem => item instanceof TreeItem && !(item instanceof Route))
 				.map((item) => item.resourceUri)
 				.filter((uri): uri is Uri => !!uri);
 			await this.dropHandler.move(treeUris.length > 0 ? treeUris : droppedUris, targetFolder);
@@ -295,6 +307,10 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 	private getDropTargetFolder(target: TreeItem | undefined): Uri | undefined {
 		if (target instanceof KaotoFolder) {
 			return target.folderUri;
+		}
+		if (target instanceof Route) {
+			const integration = this.routeParents.get(target);
+			return integration ? Uri.joinPath(integration.filepath, '..') : undefined;
 		}
 		if (target?.resourceUri) {
 			return Uri.joinPath(target.resourceUri, '..');
@@ -319,6 +335,15 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 			roots.push(await this.createFolderItem(workspaceFolder.name, workspaceFolder.uri, false, true));
 		}
 		return roots;
+	}
+
+	private async getRouteChildren(integration: Integration): Promise<TreeItem[]> {
+		const routes = await this.integrationFiles.getRoutes(integration);
+		routes.forEach((route, index) => {
+			route.id = `${integration.filepath.toString()}#route-${index}`;
+			this.routeParents.set(route, integration);
+		});
+		return routes;
 	}
 
 	private async getFolderChildren(folderUri: Uri, underMavenRoot: boolean, isWorkspaceRoot: boolean): Promise<TreeItem[]> {
@@ -397,8 +422,7 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 		const fileName = basename(uri.path);
 		let item: TreeItem;
 		if (IntegrationFiles.isIntegrationFile(fileName)) {
-			// without route children, so Camel files are leaves and line up with the other files like in the native Explorer
-			item = await this.integrationFiles.createIntegrationItem(uri, underMavenRoot, isTopLevelWithinWorkspace, false);
+			item = await this.integrationFiles.createIntegrationItem(uri, underMavenRoot, isTopLevelWithinWorkspace);
 		} else if (this.fileNameMatcher.isRunnableTest(fileName)) {
 			item = this.createTestItem(uri, underMavenRoot);
 		} else if (this.fileNameMatcher.matches('openapi', fileName) && (await this.getOpenApiVersion(uri)) !== undefined) {

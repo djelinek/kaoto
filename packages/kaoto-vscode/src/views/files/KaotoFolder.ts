@@ -37,6 +37,10 @@ export class KaotoFolder extends Folder {
 		this.id = folderUri.toString();
 		// the file icon theme decides, so folders take the same space as in the native Explorer (no icon with Seti)
 		this.iconPath = ThemeIcon.Folder;
+		if (isMavenRoot) {
+			this.description = 'Maven project';
+			this.tooltip = `Maven project (pom.xml)\n${folderUri.fsPath}`;
+		}
 		const flags = [content.hasCamelFiles ? 'camel' : undefined, content.hasTestFiles ? 'tests' : undefined].filter(Boolean);
 		this.contextValue = [this.contextValue, ...flags].join(';');
 	}

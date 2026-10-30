@@ -44,12 +44,12 @@ export class IntegrationFiles {
 	 * @param isUnderMavenRoot Whether the file is under a Maven root
 	 * @param isTopLevelWithinWorkspace Whether the file is a top level within the workspace
 	 */
-	async createIntegrationItem(file: Uri, isUnderMavenRoot: boolean, isTopLevelWithinWorkspace: boolean, withRoutes = true): Promise<Integration> {
+	async createIntegrationItem(file: Uri, isUnderMavenRoot: boolean, isTopLevelWithinWorkspace: boolean): Promise<Integration> {
 		const filename = basename(file.fsPath);
 		const { dsl, type, name, icon, description } = this.getFileType(filename);
 		let collapsibleState = TreeItemCollapsibleState.None;
 		// if the file is a route integration file, get the routes inside the file and set the collapsible state accordingly
-		if (withRoutes && type === 'route') {
+		if (type === 'route') {
 			const routes = await this.getRoutesInsideIntegrationFile(dsl, file);
 			collapsibleState = routes.length > 0 ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.None;
 		}
