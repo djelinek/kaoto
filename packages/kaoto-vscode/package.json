@@ -624,16 +624,6 @@
         "category": "Kaoto"
       },
       {
-        "command": "kaoto.files.showRoutes",
-        "title": "Show Routes in Camel Files",
-        "category": "Kaoto"
-      },
-      {
-        "command": "kaoto.files.hideRoutes",
-        "title": "Hide Routes in Camel Files",
-        "category": "Kaoto"
-      },
-      {
         "command": "kaoto.files.newFile",
         "title": "New File...",
         "category": "Kaoto",
@@ -1312,17 +1302,17 @@
         },
         {
           "command": "kaoto.files.revealInOS",
-          "when": "view == kaoto.files && viewItem != route && !isWeb && resourceScheme == file",
+          "when": "view == kaoto.files && !isWeb && resourceScheme == file",
           "group": "navigation@20"
         },
         {
           "command": "kaoto.files.revealInExplorer",
-          "when": "view == kaoto.files && viewItem != route",
+          "when": "view == kaoto.files",
           "group": "navigation@21"
         },
         {
           "command": "kaoto.files.openInTerminal",
-          "when": "view == kaoto.files && viewItem != route",
+          "when": "view == kaoto.files",
           "group": "navigation@30"
         },
         {
@@ -1342,12 +1332,12 @@
         },
         {
           "command": "kaoto.files.cut",
-          "when": "view == kaoto.files && viewItem != route",
+          "when": "view == kaoto.files",
           "group": "5_cutcopypaste@1"
         },
         {
           "command": "kaoto.files.copy",
-          "when": "view == kaoto.files && viewItem != route",
+          "when": "view == kaoto.files",
           "group": "5_cutcopypaste@2"
         },
         {
@@ -1357,22 +1347,22 @@
         },
         {
           "command": "kaoto.files.copyPath",
-          "when": "view == kaoto.files && viewItem != route",
+          "when": "view == kaoto.files",
           "group": "6_copypath@1"
         },
         {
           "command": "kaoto.files.copyRelativePath",
-          "when": "view == kaoto.files && viewItem != route",
+          "when": "view == kaoto.files",
           "group": "6_copypath@2"
         },
         {
           "command": "kaoto.files.rename",
-          "when": "view == kaoto.files && viewItem != route",
+          "when": "view == kaoto.files",
           "group": "7_modification@1"
         },
         {
           "command": "kaoto.files.delete",
-          "when": "view == kaoto.files && viewItem != route",
+          "when": "view == kaoto.files",
           "group": "7_modification@2"
         }
       ],
@@ -1396,16 +1386,6 @@
           "command": "kaoto.files.filter.openapi",
           "group": "1_filter@4",
           "when": "kaoto.files.filter != openapi"
-        },
-        {
-          "command": "kaoto.files.showRoutes",
-          "group": "2_routes@1",
-          "when": "!kaoto.files.showRoutes && kaoto.files.filter =~ /^(all|camel)$/"
-        },
-        {
-          "command": "kaoto.files.hideRoutes",
-          "group": "2_routes@1",
-          "when": "kaoto.files.showRoutes && kaoto.files.filter =~ /^(all|camel)$/"
         }
       ],
       "kaoto.files.new": [

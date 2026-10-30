@@ -102,10 +102,6 @@ export const COMMAND_FILES_FILTER_TESTS = 'kaoto.files.filter.tests';
 
 export const COMMAND_FILES_FILTER_OPENAPI = 'kaoto.files.filter.openapi';
 
-export const COMMAND_FILES_SHOW_ROUTES = 'kaoto.files.showRoutes';
-
-export const COMMAND_FILES_HIDE_ROUTES = 'kaoto.files.hideRoutes';
-
 export const COMMAND_FILES_NEW_FILE = 'kaoto.files.newFile';
 
 export const COMMAND_FILES_NEW_FOLDER = 'kaoto.files.newFolder';

@@ -10,6 +10,4 @@ export const CONTEXT_TEST_RESULTS_EXIST = 'kaoto.testResultsExist';
 
 export const CONTEXT_FILES_FILTER = 'kaoto.files.filter';
 
-export const CONTEXT_FILES_SHOW_ROUTES = 'kaoto.files.showRoutes';
-
 export const CONTEXT_FILES_CAN_PASTE = 'kaoto.files.canPaste';

@@ -153,19 +153,13 @@ suite('KaotoFilesProvider', () => {
 		assert.deepEqual((await listTestFolder(provider)).map(label), ['my.camel.yaml']);
 	});
 
-	test('Camel files have no route children by default, so they line up with the other files', async () => {
+	test('Camel files never expand and summarize their routes, so they line up with the other files', async () => {
 		provider = new KaotoFilesProvider('', 'all');
 		const integration = (await listTestFolder(provider)).find((item) => item instanceof Integration)!;
 		assert.strictEqual(integration.collapsibleState, vscode.TreeItemCollapsibleState.None);
-	});
-
-	test('routes of a Camel file are listed under it and know their parent', async () => {
-		provider = new KaotoFilesProvider('', 'all');
-		provider.setShowRoutes(true);
-		const integration = (await listTestFolder(provider)).find((item) => item instanceof Integration)!;
-		const routes = await provider.getChildren(integration);
-		assert.deepEqual(routes.map(label), ['route-1']);
-		assert.strictEqual(await provider.getParent(routes[0]), integration);
+		assert.deepEqual(await provider.getChildren(integration), []);
+		assert.strictEqual(integration.description, 'Camel Route · 1 route');
+		assert.include(String(integration.tooltip), '• route-1');
 	});
 
 	test('a file can be found for reveal, and its parent is its folder', async () => {

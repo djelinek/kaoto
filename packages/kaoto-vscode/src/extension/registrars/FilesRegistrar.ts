@@ -23,8 +23,6 @@ import {
 	COMMAND_FILES_CUT,
 	COMMAND_FILES_DELETE,
 	COMMAND_FILES_FILTER_ALL,
-	COMMAND_FILES_HIDE_ROUTES,
-	COMMAND_FILES_SHOW_ROUTES,
 	COMMAND_FILES_FILTER_CAMEL,
 	COMMAND_FILES_FILTER_OPENAPI,
 	COMMAND_FILES_FILTER_TESTS,
@@ -41,16 +39,13 @@ import {
 	COMMAND_FILES_REVEAL_IN_OS,
 	COMMAND_FILES_SELECT_FOR_COMPARE,
 	CONTEXT_FILES_FILTER,
-	CONTEXT_FILES_SHOW_ROUTES,
 	STATE_FILES_FILTER,
-	STATE_FILES_SHOW_ROUTES,
 	VIEW_FILES,
 } from '../../constants';
 import { KaotoFilesProvider, TestStateSource } from '../../views/files/KaotoFilesProvider';
 import { KaotoFileOperations } from '../../views/files/KaotoFileOperations';
 import { isKaotoFilesFilter, KAOTO_FILES_FILTERS, KaotoFilesFilter } from '../../views/files/KaotoFilesFilter';
 import { KaotoFolder } from '../../views/files/KaotoFolder';
-import { Route } from '../../views/integrations/Route';
 import { sendCommandTrackingEvent } from './TrackingEvent';
 import { IRegistrar } from './IRegistrar';
 
@@ -75,7 +70,6 @@ export class FilesRegistrar implements IRegistrar {
 	register(): void {
 		this.registerFilesView();
 		this.registerFilterCommands();
-		this.registerRoutesToggle();
 		this.registerFileOperationCommands();
 		this.registerPathAndRevealCommands();
 		this.registerAutoReveal();
@@ -87,9 +81,6 @@ export class FilesRegistrar implements IRegistrar {
 
 		this.provider = new KaotoFilesProvider(this.context.extensionUri.path, filter, this.getTestStateSource());
 		this.provider.setDropHandler(this.operations);
-		const showRoutes = this.context.workspaceState.get<boolean>(STATE_FILES_SHOW_ROUTES, false);
-		this.provider.setShowRoutes(showRoutes);
-		vscode.commands.executeCommand('setContext', CONTEXT_FILES_SHOW_ROUTES, showRoutes);
 		this.treeView = vscode.window.createTreeView(VIEW_FILES, {
 			treeDataProvider: this.provider,
 			dragAndDropController: this.provider,
@@ -118,23 +109,6 @@ export class FilesRegistrar implements IRegistrar {
 					this.provider.setFilter(filter);
 					this.updateFilterPresentation(filter);
 					await this.context.workspaceState.update(STATE_FILES_FILTER, filter);
-					await sendCommandTrackingEvent(this.telemetryService, commandId);
-				}),
-			);
-		}
-	}
-
-	private registerRoutesToggle(): void {
-		const toggles: [string, boolean][] = [
-			[COMMAND_FILES_SHOW_ROUTES, true],
-			[COMMAND_FILES_HIDE_ROUTES, false],
-		];
-		for (const [commandId, showRoutes] of toggles) {
-			this.context.subscriptions.push(
-				vscode.commands.registerCommand(commandId, async () => {
-					this.provider.setShowRoutes(showRoutes);
-					vscode.commands.executeCommand('setContext', CONTEXT_FILES_SHOW_ROUTES, showRoutes);
-					await this.context.workspaceState.update(STATE_FILES_SHOW_ROUTES, showRoutes);
 					await sendCommandTrackingEvent(this.telemetryService, commandId);
 				}),
 			);
@@ -313,10 +287,7 @@ export class FilesRegistrar implements IRegistrar {
 	}
 
 	private getResourceUris(items: vscode.TreeItem[]): vscode.Uri[] {
-		return items
-			.filter((item) => !(item instanceof Route))
-			.map((item) => item.resourceUri)
-			.filter((uri): uri is vscode.Uri => !!uri);
+		return items.map((item) => item.resourceUri).filter((uri): uri is vscode.Uri => !!uri);
 	}
 
 	private async executeForFirstUri(items: vscode.TreeItem[], commandId: string): Promise<void> {
@@ -334,7 +305,7 @@ export class FilesRegistrar implements IRegistrar {
 		if (item instanceof KaotoFolder) {
 			return item.folderUri;
 		}
-		if (item?.resourceUri && !(item instanceof Route)) {
+		if (item?.resourceUri) {
 			return vscode.Uri.joinPath(item.resourceUri, '..');
 		}
 		const workspaceFolders = vscode.workspace.workspaceFolders ?? [];

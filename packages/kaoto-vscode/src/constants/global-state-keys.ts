@@ -3,5 +3,3 @@ export const STATE_LAST_WHATS_NEW_SHOWN_VERSION = 'kaoto.lastWhatsNewShownVersio
 export const STATE_SHOW_RUN_ALL_FOLDERS_MESSAGE = 'kaoto.showRunAllFoldersMessage';
 
 export const STATE_FILES_FILTER = 'kaoto.files.filter';
-
-export const STATE_FILES_SHOW_ROUTES = 'kaoto.files.showRoutes';
