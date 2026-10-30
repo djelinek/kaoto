@@ -22,6 +22,7 @@ import {
 	EventEmitter,
 	FileSystemWatcher,
 	FileType,
+	ThemeIcon,
 	TreeDataProvider,
 	TreeDragAndDropController,
 	TreeItem,
@@ -353,6 +354,7 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 
 	private async getRouteChildren(integration: Integration): Promise<TreeItem[]> {
 		const routes = await this.integrationFiles.getRoutes(integration);
+		routes.forEach((route) => (route.iconPath = new ThemeIcon('type-hierarchy-sub')));
 		routes.forEach((route, index) => {
 			route.id = `${integration.filepath.toString()}#route-${index}`;
 			this.routeParents.set(route, integration);
@@ -437,6 +439,8 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 		let item: TreeItem;
 		if (IntegrationFiles.isIntegrationFile(fileName)) {
 			item = await this.integrationFiles.createIntegrationItem(uri, underMavenRoot, isTopLevelWithinWorkspace, this.showRoutes);
+			// the file icon of the user's file icon theme, like the native Explorer (the description tells the Camel file type)
+			item.iconPath = ThemeIcon.File;
 		} else if (this.fileNameMatcher.isRunnableTest(fileName)) {
 			item = this.createTestItem(uri, underMavenRoot);
 		} else if (this.fileNameMatcher.matches('openapi', fileName) && (await this.getOpenApiVersion(uri)) !== undefined) {
