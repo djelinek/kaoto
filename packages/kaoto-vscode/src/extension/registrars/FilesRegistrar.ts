@@ -23,6 +23,8 @@ import {
 	COMMAND_FILES_CUT,
 	COMMAND_FILES_DELETE,
 	COMMAND_FILES_FILTER_ALL,
+	COMMAND_FILES_HIDE_ROUTES,
+	COMMAND_FILES_SHOW_ROUTES,
 	COMMAND_FILES_FILTER_CAMEL,
 	COMMAND_FILES_FILTER_OPENAPI,
 	COMMAND_FILES_FILTER_TESTS,
@@ -39,7 +41,9 @@ import {
 	COMMAND_FILES_REVEAL_IN_OS,
 	COMMAND_FILES_SELECT_FOR_COMPARE,
 	CONTEXT_FILES_FILTER,
+	CONTEXT_FILES_SHOW_ROUTES,
 	STATE_FILES_FILTER,
+	STATE_FILES_SHOW_ROUTES,
 	VIEW_FILES,
 } from '../../constants';
 import { KaotoFilesProvider, TestStateSource } from '../../views/files/KaotoFilesProvider';
@@ -71,6 +75,7 @@ export class FilesRegistrar implements IRegistrar {
 	register(): void {
 		this.registerFilesView();
 		this.registerFilterCommands();
+		this.registerRoutesToggle();
 		this.registerFileOperationCommands();
 		this.registerPathAndRevealCommands();
 		this.registerAutoReveal();
@@ -82,6 +87,9 @@ export class FilesRegistrar implements IRegistrar {
 
 		this.provider = new KaotoFilesProvider(this.context.extensionUri.path, filter, this.getTestStateSource());
 		this.provider.setDropHandler(this.operations);
+		const showRoutes = this.context.workspaceState.get<boolean>(STATE_FILES_SHOW_ROUTES, false);
+		this.provider.setShowRoutes(showRoutes);
+		vscode.commands.executeCommand('setContext', CONTEXT_FILES_SHOW_ROUTES, showRoutes);
 		this.treeView = vscode.window.createTreeView(VIEW_FILES, {
 			treeDataProvider: this.provider,
 			dragAndDropController: this.provider,
@@ -110,6 +118,23 @@ export class FilesRegistrar implements IRegistrar {
 					this.provider.setFilter(filter);
 					this.updateFilterPresentation(filter);
 					await this.context.workspaceState.update(STATE_FILES_FILTER, filter);
+					await sendCommandTrackingEvent(this.telemetryService, commandId);
+				}),
+			);
+		}
+	}
+
+	private registerRoutesToggle(): void {
+		const toggles: [string, boolean][] = [
+			[COMMAND_FILES_SHOW_ROUTES, true],
+			[COMMAND_FILES_HIDE_ROUTES, false],
+		];
+		for (const [commandId, showRoutes] of toggles) {
+			this.context.subscriptions.push(
+				vscode.commands.registerCommand(commandId, async () => {
+					this.provider.setShowRoutes(showRoutes);
+					vscode.commands.executeCommand('setContext', CONTEXT_FILES_SHOW_ROUTES, showRoutes);
+					await this.context.workspaceState.update(STATE_FILES_SHOW_ROUTES, showRoutes);
 					await sendCommandTrackingEvent(this.telemetryService, commandId);
 				}),
 			);

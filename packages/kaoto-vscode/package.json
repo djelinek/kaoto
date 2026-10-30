@@ -624,6 +624,16 @@
         "category": "Kaoto"
       },
       {
+        "command": "kaoto.files.showRoutes",
+        "title": "Show Routes in Camel Files",
+        "category": "Kaoto"
+      },
+      {
+        "command": "kaoto.files.hideRoutes",
+        "title": "Hide Routes in Camel Files",
+        "category": "Kaoto"
+      },
+      {
         "command": "kaoto.files.newFile",
         "title": "New File...",
         "category": "Kaoto",
@@ -1386,6 +1396,16 @@
           "command": "kaoto.files.filter.openapi",
           "group": "1_filter@4",
           "when": "kaoto.files.filter != openapi"
+        },
+        {
+          "command": "kaoto.files.showRoutes",
+          "group": "2_routes@1",
+          "when": "!kaoto.files.showRoutes && kaoto.files.filter =~ /^(all|camel)$/"
+        },
+        {
+          "command": "kaoto.files.hideRoutes",
+          "group": "2_routes@1",
+          "when": "kaoto.files.showRoutes && kaoto.files.filter =~ /^(all|camel)$/"
         }
       ],
       "kaoto.files.new": [

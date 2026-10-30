@@ -95,6 +95,7 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 
 	/** tree items by id (the uri), used to find parents and to refresh single items */
 	private readonly items = new Map<string, TreeItem>();
+	private showRoutes = false;
 	/** parent integration of each route item */
 	private readonly routeParents = new WeakMap<TreeItem, Integration>();
 	/** search results of the Camel, Tests and OpenAPI filters (file system paths) */
@@ -149,6 +150,19 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 			return;
 		}
 		this.filter = filter;
+		this.refreshNow();
+	}
+
+	/**
+	 * Show the routes of Camel files as their children.
+	 * Off by default: VS Code only lines files up under the folder twisty like the native Explorer when no sibling
+	 * can expand and has its own icon, so expandable Camel files push the other files of their folder to the right.
+	 */
+	setShowRoutes(showRoutes: boolean): void {
+		if (this.showRoutes === showRoutes) {
+			return;
+		}
+		this.showRoutes = showRoutes;
 		this.refreshNow();
 	}
 
@@ -422,7 +436,7 @@ export class KaotoFilesProvider implements TreeDataProvider<TreeItem>, TreeDragA
 		const fileName = basename(uri.path);
 		let item: TreeItem;
 		if (IntegrationFiles.isIntegrationFile(fileName)) {
-			item = await this.integrationFiles.createIntegrationItem(uri, underMavenRoot, isTopLevelWithinWorkspace);
+			item = await this.integrationFiles.createIntegrationItem(uri, underMavenRoot, isTopLevelWithinWorkspace, this.showRoutes);
 		} else if (this.fileNameMatcher.isRunnableTest(fileName)) {
 			item = this.createTestItem(uri, underMavenRoot);
 		} else if (this.fileNameMatcher.matches('openapi', fileName) && (await this.getOpenApiVersion(uri)) !== undefined) {
