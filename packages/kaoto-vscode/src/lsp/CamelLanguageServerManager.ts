@@ -54,8 +54,9 @@ export class CamelLanguageServerManager {
 
 	/**
 	 * Start the Camel Language Server.
+	 * @param initializationOptions Optional settings to send to the server on startup
 	 */
-	async start(): Promise<void> {
+	async start(initializationOptions?: Record<string, unknown>): Promise<void> {
 		this.createStatusBar();
 		this.updateStatusBar('starting');
 
@@ -92,6 +93,7 @@ export class CamelLanguageServerManager {
 			synchronize: {
 				fileEvents: this.fileWatchers,
 			},
+			initializationOptions,
 		};
 
 		this.languageClient = new LanguageClient(LANGUAGE_CLIENT_ID, LANGUAGE_CLIENT_NAME, serverOptions, clientOptions);
@@ -133,6 +135,13 @@ export class CamelLanguageServerManager {
 	 */
 	isRunning(): boolean {
 		return this.languageClient?.isRunning() ?? false;
+	}
+
+	/**
+	 * Get the underlying LanguageClient for sending notifications.
+	 */
+	getClient(): LanguageClient | undefined {
+		return this.languageClient;
 	}
 
 	/**

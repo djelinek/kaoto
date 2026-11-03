@@ -16,18 +16,26 @@
 import * as vscode from 'vscode';
 import { KAOTO_LSP_ENABLED_SETTING_ID, KAOTO_LSP_SERVER_JAR_SETTING_ID } from '../../constants';
 import { CamelLanguageServerManager } from '../../lsp/CamelLanguageServerManager';
+import { CamelLspConfigurationSync } from '../../lsp/CamelLspConfigurationSync';
 import { isCamelLspDocument } from '../../lsp/CamelLspDocumentFilter';
 import { KaotoOutputChannel } from '../KaotoOutputChannel';
+import { KaotoCatalogService } from '../../services/KaotoCatalogService';
 import { IRegistrar } from './IRegistrar';
 
 export class LanguageServerRegistrar implements IRegistrar {
 	private lspManager: CamelLanguageServerManager | undefined;
+	private configSync: CamelLspConfigurationSync | undefined;
+	private configListenerDisposable: vscode.Disposable | undefined;
 	private camelDocumentListener: vscode.Disposable | undefined;
 	private starting: Promise<void> | undefined;
 
-	constructor(private readonly context: vscode.ExtensionContext) {}
+	constructor(
+		private readonly context: vscode.ExtensionContext,
+		private readonly catalogService: KaotoCatalogService,
+	) {}
 
 	async register(): Promise<void> {
+		this.configSync = new CamelLspConfigurationSync(this.catalogService);
 		this.lspManager = new CamelLanguageServerManager(this.context);
 		this.context.subscriptions.push(this.lspManager.onDidRequestRetry(() => this.startInBackground()));
 
@@ -106,11 +114,20 @@ export class LanguageServerRegistrar implements IRegistrar {
 	}
 
 	private async doStartLsp(): Promise<void> {
-		if (!this.lspManager || this.lspManager.isRunning()) {
+		if (!this.lspManager || !this.configSync || this.lspManager.isRunning()) {
 			return;
 		}
 
-		await this.lspManager.start();
+		const initialSettings = await this.configSync.getInitialSettings();
+		await this.lspManager.start(initialSettings);
+
+		// Register config change listeners after successful start
+		const client = this.lspManager.getClient();
+		if (client && this.lspManager.isRunning()) {
+			// Dispose previous config listener to avoid accumulation on toggle cycles
+			this.configListenerDisposable?.dispose();
+			this.configListenerDisposable = this.configSync.registerListeners(this.context, client);
+		}
 	}
 
 	/**
@@ -118,6 +135,8 @@ export class LanguageServerRegistrar implements IRegistrar {
 	 */
 	async stop(): Promise<void> {
 		this.disposeCamelDocumentListener();
+		this.configListenerDisposable?.dispose();
+		this.configListenerDisposable = undefined;
 		if (this.lspManager) {
 			await this.lspManager.stop();
 		}
