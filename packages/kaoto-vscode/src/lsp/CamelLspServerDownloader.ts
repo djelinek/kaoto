@@ -29,13 +29,19 @@ const CAMEL_LSP_SERVER_SHA256 = '4e35085b7f87e9f6647291a30c5fde8b63e79a2150279f9
 
 const MAVEN_CENTRAL_URL = 'https://repo1.maven.org/maven2/com/github/camel-tooling/camel-lsp-server';
 const DOWNLOAD_TIMEOUT_MS = 60_000;
+const FETCH_TIMEOUT_MS = 10_000;
 const MAX_REDIRECTS = 5;
-const HASH_NAMES = { sha256: 'SHA-256' };
+// the Maven Central snapshot repository answers 403 Forbidden to requests without a User-Agent
+const USER_AGENT = 'vscode-kaoto';
+const HASH_NAMES = { sha1: 'SHA-1', sha256: 'SHA-256' };
 
 /** Reports the bytes received so far, and the total size when the server sends it. */
 export type DownloadProgress = (receivedBytes: number, totalBytes: number | undefined) => void;
 
 export type FileDownload = (url: string, targetPath: string, onProgress?: DownloadProgress) => Promise<void>;
+
+/** Reads a small text file, such as Maven metadata or a checksum. */
+export type TextFetch = (url: string) => Promise<string>;
 
 /** The hash that a downloaded file must have. */
 export interface Checksum {
@@ -145,12 +151,25 @@ export async function downloadFile(url: string, targetPath: string, onProgress?:
 }
 
 /**
+ * Reads a text file over HTTPS, following redirects.
+ */
+export async function fetchText(url: string): Promise<string> {
+	const response = await get(url, FETCH_TIMEOUT_MS);
+	// decoded only at the end: the network inspection of Node, on in a debugged extension host, fails on text chunks
+	const chunks: Buffer[] = [];
+	for await (const chunk of response) {
+		chunks.push(chunk);
+	}
+	return Buffer.concat(chunks).toString('utf8');
+}
+
+/**
  * Sends a GET request over HTTPS, following redirects.
  * @returns the response of the last URL, rejected unless it is 200 OK or when no data comes for the timeout
  */
 function get(url: string, timeoutMs: number, redirects = MAX_REDIRECTS): Promise<IncomingMessage> {
 	return new Promise((resolve, reject) => {
-		const request = https.get(url, { timeout: timeoutMs }, (response) => {
+		const request = https.get(url, { timeout: timeoutMs, headers: { 'User-Agent': USER_AGENT } }, (response) => {
 			const statusCode = response.statusCode ?? 0;
 			const location = response.headers.location;
 			if (statusCode >= 300 && statusCode < 400 && location && redirects > 0) {

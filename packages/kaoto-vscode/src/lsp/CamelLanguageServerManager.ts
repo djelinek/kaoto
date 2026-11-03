@@ -18,10 +18,11 @@ import * as path from 'path'; // NOSONAR
 import * as fs from 'fs'; // NOSONAR
 import { execFile } from 'child_process';
 import { Executable, LanguageClient, LanguageClientOptions } from 'vscode-languageclient/node';
-import { KAOTO_LSP_SERVER_JAR_SETTING_ID } from '../constants';
+import { KAOTO_LSP_SERVER_JAR_SETTING_ID, KAOTO_LSP_USE_LATEST_SNAPSHOT_SETTING_ID } from '../constants';
 import { KaotoOutputChannel } from '../extension/KaotoOutputChannel';
 import { CAMEL_LSP_DOCUMENT_SELECTORS, CAMEL_LSP_FILE_WATCHER_GLOBS } from './CamelLspDocumentFilter';
 import { CamelLspServerDownloader, DownloadProgress } from './CamelLspServerDownloader';
+import { CamelLspSnapshotDownloader, describeSnapshotBuild } from './CamelLspSnapshotDownloader';
 
 const LANGUAGE_CLIENT_ID = 'LANGUAGE_ID_APACHE_CAMEL_KAOTO';
 // also the name of the client's output channel, listed next to the 'Kaoto' channel
@@ -31,7 +32,7 @@ type StatusBarState = 'starting' | 'running' | 'error';
 
 /**
  * Manages the lifecycle of the Camel Language Server: Java detection, JAR resolution
- * (the JAR set in the settings, or the release, downloaded when needed),
+ * (the JAR set in the settings, or the release or the latest snapshot, downloaded when needed),
  * and starting/stopping the underlying `LanguageClient`.
  */
 export class CamelLanguageServerManager {
@@ -48,6 +49,7 @@ export class CamelLanguageServerManager {
 	constructor(
 		private readonly context: vscode.ExtensionContext,
 		private readonly downloader = new CamelLspServerDownloader(context.globalStorageUri.fsPath),
+		private readonly snapshotDownloader = new CamelLspSnapshotDownloader(context.globalStorageUri.fsPath),
 	) {
 		context.subscriptions.push(this.retryRequested);
 	}
@@ -195,7 +197,7 @@ export class CamelLanguageServerManager {
 	}
 
 	/**
-	 * @returns the JAR set in the settings, or the release, downloaded first when needed;
+	 * @returns the JAR set in the settings, or the latest snapshot or the release, downloaded first when needed;
 	 * undefined, after reporting the problem, when there is no JAR to run
 	 */
 	async resolveJarPath(): Promise<string | undefined> {
@@ -210,12 +212,48 @@ export class CamelLanguageServerManager {
 			return undefined;
 		}
 
+		if (vscode.workspace.getConfiguration().get<boolean>(KAOTO_LSP_USE_LATEST_SNAPSHOT_SETTING_ID, false)) {
+			return this.resolveSnapshotJarPath();
+		}
+
 		try {
 			return await this.downloadServerJar();
 		} catch (error) {
 			this.showDownloadError(`Camel Language Server ${this.downloader.getVersion()}`, error);
 			return undefined;
 		}
+	}
+
+	/**
+	 * @returns the JAR of the latest snapshot, or the one downloaded before when the latest cannot be looked up or
+	 * downloaded; undefined, after reporting the problem, when there is neither
+	 */
+	private async resolveSnapshotJarPath(): Promise<string | undefined> {
+		try {
+			return await this.downloadLatestSnapshotJar();
+		} catch (error) {
+			const downloadedBuild = this.snapshotDownloader.findDownloadedBuild();
+			if (!downloadedBuild) {
+				this.showDownloadError('the latest Camel Language Server snapshot', error);
+				return undefined;
+			}
+			KaotoOutputChannel.logWarning(
+				`Could not get the latest Camel Language Server snapshot, running the downloaded ${describeSnapshotBuild(downloadedBuild)}: ${reasonOf(error)}`,
+			);
+			return this.snapshotDownloader.getJarPath(downloadedBuild);
+		}
+	}
+
+	private async downloadLatestSnapshotJar(): Promise<string> {
+		const build = await this.snapshotDownloader.findLatestBuild();
+		const description = describeSnapshotBuild(build);
+		KaotoOutputChannel.logInfo(`Latest Camel Language Server snapshot: ${description}`);
+		if (this.snapshotDownloader.isDownloaded(build)) {
+			return this.snapshotDownloader.ensureServerJar(build);
+		}
+		return this.downloadWithProgress(description, this.snapshotDownloader.getDownloadUrl(build), (onProgress) =>
+			this.snapshotDownloader.ensureServerJar(build, onProgress),
+		);
 	}
 
 	private async downloadServerJar(): Promise<string> {

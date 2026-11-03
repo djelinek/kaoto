@@ -19,9 +19,10 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { KAOTO_LSP_SERVER_JAR_SETTING_ID } from '../../constants';
+import { KAOTO_LSP_SERVER_JAR_SETTING_ID, KAOTO_LSP_USE_LATEST_SNAPSHOT_SETTING_ID } from '../../constants';
 import { CamelLanguageServerManager } from '../../lsp/CamelLanguageServerManager';
-import { CamelLspServerDownloader, FileDownload } from '../../lsp/CamelLspServerDownloader';
+import { CamelLspServerDownloader, FileDownload, TextFetch } from '../../lsp/CamelLspServerDownloader';
+import { CamelLspSnapshotDownloader } from '../../lsp/CamelLspSnapshotDownloader';
 
 suite('CamelLanguageServerManager', () => {
 	test('findJavaExecutable should return a string or undefined', async () => {
@@ -51,13 +52,38 @@ suite('CamelLanguageServerManager', () => {
 	});
 
 	suite('resolveJarPath', () => {
+		const REPOSITORY_URL = 'https://central.sonatype.com/repository/maven-snapshots/com/github/camel-tooling/camel-lsp-server';
+		const LATEST_BUILD = '1.36.0-20261030.152716-14';
+		const DOWNLOADED_BUILD = '1.36.0-20261029.090000-13';
 		const RELEASE_CONTENT = 'release jar content';
+		const SNAPSHOT_CONTENT = 'snapshot jar content';
 		const hash = (algorithm: string, content: string) => crypto.createHash(algorithm).update(content).digest('hex');
 
 		const originalGetConfiguration = vscode.workspace.getConfiguration;
+		const originalShowErrorMessage = vscode.window.showErrorMessage;
 		let storageDir: string;
 		let settings: Record<string, unknown>;
+		let errorMessages: string[];
 		let requestedUrls: string[];
+
+		const snapshotRepository: TextFetch = async (url) => {
+			requestedUrls.push(url);
+			const files: Record<string, string> = {
+				[`${REPOSITORY_URL}/maven-metadata.xml`]:
+					'<metadata><versioning><versions><version>1.36.0-SNAPSHOT</version></versions></versioning></metadata>',
+				[`${REPOSITORY_URL}/1.36.0-SNAPSHOT/maven-metadata.xml`]: `<metadata><versioning><snapshotVersions><snapshotVersion><extension>jar</extension><value>${LATEST_BUILD}</value></snapshotVersion></snapshotVersions></versioning></metadata>`,
+				[`${REPOSITORY_URL}/1.36.0-SNAPSHOT/camel-lsp-server-${LATEST_BUILD}.jar.sha1`]: hash('sha1', SNAPSHOT_CONTENT),
+			};
+			if (!(url in files)) {
+				throw new Error(`HTTP 404 for ${url}`);
+			}
+			return files[url];
+		};
+
+		const unreachableRepository: TextFetch = async (url) => {
+			requestedUrls.push(url);
+			throw new Error('getaddrinfo ENOTFOUND central.sonatype.com');
+		};
 
 		const downloadWriting =
 			(content: string): FileDownload =>
@@ -66,15 +92,30 @@ suite('CamelLanguageServerManager', () => {
 				await fs.promises.writeFile(targetPath, content);
 			};
 
-		const createManager = () =>
+		const failingDownload: FileDownload = async (url) => {
+			requestedUrls.push(url);
+			throw new Error(`HTTP 503 for ${url}`);
+		};
+
+		const snapshotJarPath = (buildVersion: string) =>
+			path.join(storageDir, 'camel-lsp-server-snapshot', buildVersion, `camel-lsp-server-${buildVersion}.jar`);
+
+		const writeDownloadedBuild = () => {
+			fs.mkdirSync(path.dirname(snapshotJarPath(DOWNLOADED_BUILD)), { recursive: true });
+			fs.writeFileSync(snapshotJarPath(DOWNLOADED_BUILD), 'downloaded build');
+		};
+
+		const createManager = (snapshotFetch: TextFetch, snapshotDownload = downloadWriting(SNAPSHOT_CONTENT)) =>
 			new CamelLanguageServerManager(
 				{ subscriptions: [] } as unknown as vscode.ExtensionContext,
 				new CamelLspServerDownloader(storageDir, '1.2.3', hash('sha256', RELEASE_CONTENT), downloadWriting(RELEASE_CONTENT)),
+				new CamelLspSnapshotDownloader(storageDir, snapshotFetch, snapshotDownload),
 			);
 
 		setup(() => {
 			storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kaoto-lsp-manager-'));
-			settings = { [KAOTO_LSP_SERVER_JAR_SETTING_ID]: '' };
+			settings = { [KAOTO_LSP_SERVER_JAR_SETTING_ID]: '', [KAOTO_LSP_USE_LATEST_SNAPSHOT_SETTING_ID]: true };
+			errorMessages = [];
 			requestedUrls = [];
 			Object.defineProperty(vscode.workspace, 'getConfiguration', {
 				value: (section?: string, scope?: vscode.ConfigurationScope | null) => {
@@ -86,24 +127,67 @@ suite('CamelLanguageServerManager', () => {
 				},
 				configurable: true,
 			});
+			Object.defineProperty(vscode.window, 'showErrorMessage', {
+				value: async (message: string) => {
+					errorMessages.push(message);
+					return undefined;
+				},
+				configurable: true,
+			});
 		});
 
 		teardown(() => {
 			Object.defineProperty(vscode.workspace, 'getConfiguration', { value: originalGetConfiguration, configurable: true });
+			Object.defineProperty(vscode.window, 'showErrorMessage', { value: originalShowErrorMessage, configurable: true });
 			fs.rmSync(storageDir, { recursive: true, force: true });
 		});
 
-		test('runs the JAR set in kaoto.lsp.serverJarPath', async () => {
+		test('runs the latest snapshot when kaoto.lsp.useLatestSnapshot is on', async () => {
+			const jarPath = await createManager(snapshotRepository).resolveJarPath();
+
+			expect(jarPath).to.equal(snapshotJarPath(LATEST_BUILD));
+			expect(fs.readFileSync(snapshotJarPath(LATEST_BUILD), 'utf8')).to.equal(SNAPSHOT_CONTENT);
+		});
+
+		test('runs the snapshot downloaded before when the snapshot repository cannot be reached', async () => {
+			writeDownloadedBuild();
+
+			const jarPath = await createManager(unreachableRepository).resolveJarPath();
+
+			expect(jarPath).to.equal(snapshotJarPath(DOWNLOADED_BUILD));
+			expect(errorMessages).to.be.empty;
+		});
+
+		test('runs the snapshot downloaded before when the latest build cannot be downloaded', async () => {
+			writeDownloadedBuild();
+
+			const jarPath = await createManager(snapshotRepository, failingDownload).resolveJarPath();
+
+			expect(jarPath).to.equal(snapshotJarPath(DOWNLOADED_BUILD));
+			expect(errorMessages).to.be.empty;
+		});
+
+		test('reports the error when no snapshot can be looked up and none was downloaded before', async () => {
+			const jarPath = await createManager(unreachableRepository).resolveJarPath();
+
+			expect(jarPath).to.be.undefined;
+			expect(errorMessages).to.have.lengthOf(1);
+			expect(errorMessages[0]).to.contain('snapshot').and.contain('ENOTFOUND');
+		});
+
+		test('runs the JAR set in kaoto.lsp.serverJarPath, even when the latest snapshot is on', async () => {
 			const localJar = path.join(storageDir, 'local.jar');
 			fs.writeFileSync(localJar, 'local build');
 			settings[KAOTO_LSP_SERVER_JAR_SETTING_ID] = localJar;
 
-			expect(await createManager().resolveJarPath()).to.equal(localJar);
+			expect(await createManager(snapshotRepository).resolveJarPath()).to.equal(localJar);
 			expect(requestedUrls).to.be.empty;
 		});
 
-		test('runs the release when no JAR is set', async () => {
-			const jarPath = await createManager().resolveJarPath();
+		test('runs the release when the latest snapshot is off', async () => {
+			settings[KAOTO_LSP_USE_LATEST_SNAPSHOT_SETTING_ID] = false;
+
+			const jarPath = await createManager(snapshotRepository).resolveJarPath();
 
 			expect(jarPath).to.equal(path.join(storageDir, 'camel-lsp-server', '1.2.3', 'camel-lsp-server-1.2.3.jar'));
 			expect(requestedUrls).to.deep.equal(['https://repo1.maven.org/maven2/com/github/camel-tooling/camel-lsp-server/1.2.3/camel-lsp-server-1.2.3.jar']);

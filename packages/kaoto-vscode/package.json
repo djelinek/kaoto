@@ -1391,6 +1391,13 @@
             "scope": "machine",
             "order": 1
           },
+          "kaoto.lsp.useLatestSnapshot": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Use the latest snapshot of the Camel Language Server instead of the stable release, to try changes before they are released. Ignored when `#kaoto.lsp.serverJarPath#` is set.",
+            "scope": "machine",
+            "order": 2
+          },
           "kaoto.lsp.extraComponents": {
             "type": "array",
             "markdownDescription": "(Experimental) List of additional Camel components to include in the catalog, described as a JSON list respecting Camel catalog syntax.",

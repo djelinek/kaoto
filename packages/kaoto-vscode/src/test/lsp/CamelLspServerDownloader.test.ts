@@ -15,10 +15,14 @@
  */
 import { expect } from 'chai';
 import * as crypto from 'crypto';
+import { EventEmitter } from 'events';
 import * as fs from 'fs';
+import type { IncomingMessage, OutgoingHttpHeaders } from 'http';
+import https, { type RequestOptions } from 'https';
 import * as os from 'os';
 import * as path from 'path';
-import { CAMEL_LSP_SERVER_VERSION, CamelLspServerDownloader, FileDownload } from '../../lsp/CamelLspServerDownloader';
+import { Readable } from 'stream';
+import { CAMEL_LSP_SERVER_VERSION, CamelLspServerDownloader, fetchText, FileDownload } from '../../lsp/CamelLspServerDownloader';
 
 const JAR_CONTENT = 'camel-lsp-server jar content';
 const JAR_SHA256 = crypto.createHash('sha256').update(JAR_CONTENT).digest('hex');
@@ -121,6 +125,65 @@ suite('CamelLspServerDownloader', () => {
 		await downloader.ensureServerJar();
 
 		expect(fs.readdirSync(path.join(storageDir, 'camel-lsp-server'))).to.deep.equal([VERSION]);
+	});
+
+	test('keeps the downloaded snapshot after a download', async () => {
+		const snapshotJar = path.join(storageDir, 'camel-lsp-server-snapshot', '1.36.0-20261030.152716-14', 'camel-lsp-server-1.36.0-20261030.152716-14.jar');
+		fs.mkdirSync(path.dirname(snapshotJar), { recursive: true });
+		fs.writeFileSync(snapshotJar, 'snapshot build');
+		const downloader = new CamelLspServerDownloader(storageDir, VERSION, JAR_SHA256, downloadWriting(JAR_CONTENT));
+
+		await downloader.ensureServerJar();
+
+		expect(fs.existsSync(snapshotJar)).to.be.true;
+	});
+
+	test('names Kaoto in its requests, which the Maven Central snapshot repository refuses without a User-Agent', async () => {
+		const originalGet = https.get;
+		const userAgents: unknown[] = [];
+		Object.defineProperty(https, 'get', {
+			value: (_url: string, options: RequestOptions, callback: (response: IncomingMessage) => void) => {
+				userAgents.push((options.headers as OutgoingHttpHeaders | undefined)?.['User-Agent']);
+				const response = Object.assign(Readable.from([Buffer.from('<metadata/>')]), { statusCode: 200, headers: {} });
+				callback(response as unknown as IncomingMessage);
+				return new EventEmitter();
+			},
+			configurable: true,
+		});
+
+		try {
+			expect(await fetchText('https://central.sonatype.com/repository/maven-snapshots/maven-metadata.xml')).to.equal('<metadata/>');
+		} finally {
+			Object.defineProperty(https, 'get', { value: originalGet, configurable: true });
+		}
+
+		expect(userAgents).to.have.lengthOf(1);
+		expect(userAgents[0]).to.match(/^vscode-kaoto\b/);
+	});
+
+	test('reads a text file as bytes, as the network inspection of a debugged extension host requires', async () => {
+		const originalGet = https.get;
+		Object.defineProperty(https, 'get', {
+			value: (_url: string, _options: RequestOptions, callback: (response: IncomingMessage) => void) => {
+				const chunks = [Buffer.from('<metadata>'), Buffer.from('</metadata>')];
+				const response = Object.assign(Readable.from(chunks, { objectMode: false }), { statusCode: 200, headers: {} });
+				// like Node with --experimental-network-inspection, which reports the byteLength of each chunk
+				EventEmitter.prototype.on.call(response, 'data', (chunk: Uint8Array) => {
+					if (typeof chunk.byteLength !== 'number') {
+						throw new Error('Missing dataLength in event');
+					}
+				});
+				callback(response as unknown as IncomingMessage);
+				return new EventEmitter();
+			},
+			configurable: true,
+		});
+
+		try {
+			expect(await fetchText('https://central.sonatype.com/repository/maven-snapshots/maven-metadata.xml')).to.equal('<metadata></metadata>');
+		} finally {
+			Object.defineProperty(https, 'get', { value: originalGet, configurable: true });
+		}
 	});
 
 	test('uses the pinned release by default', () => {
