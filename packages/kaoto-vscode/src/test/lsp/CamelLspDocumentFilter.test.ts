@@ -43,6 +43,12 @@ suite('CamelLspDocumentFilter', () => {
 		expect(patterns).to.include('**/application*.properties');
 	});
 
+	test('should define document selectors for the properties files of the Quarkus and Spring Boot extensions', () => {
+		const selectors = CAMEL_LSP_DOCUMENT_SELECTORS.filter((s) => s.pattern === '**/application*.properties');
+
+		expect(selectors.map((s) => s.language)).to.have.members(['properties', 'quarkus-properties', 'spring-boot-properties']);
+	});
+
 	test('should define file watcher globs matching Kaoto file patterns', () => {
 		expect(CAMEL_LSP_FILE_WATCHER_GLOBS).to.be.an('array');
 		expect(CAMEL_LSP_FILE_WATCHER_GLOBS).to.include('**/*.camel.yaml');
@@ -70,7 +76,7 @@ suite('CamelLspDocumentFilter', () => {
 			return vscode.workspace.openTextDocument(vscode.Uri.joinPath(fixtureFolder, ...pathSegments));
 		};
 
-		// a document with a path and a language, without a file in the fixture
+		// the test instance has neither the Quarkus nor the Spring Boot extension, which define these languages
 		const documentWithLanguage = (filePath: string, languageId: string) =>
 			({ uri: vscode.Uri.file(filePath), languageId }) as unknown as vscode.TextDocument;
 
@@ -84,6 +90,11 @@ suite('CamelLspDocumentFilter', () => {
 			const properties = await openFixtureDocument('suggestions', 'application.properties');
 
 			expect(isCamelLspDocument(properties)).to.be.true;
+		});
+
+		test('should serve the application properties of the Quarkus and Spring Boot extensions', () => {
+			expect(isCamelLspDocument(documentWithLanguage('/project/src/main/resources/application.properties', 'quarkus-properties'))).to.be.true;
+			expect(isCamelLspDocument(documentWithLanguage('/project/src/main/resources/application-dev.properties', 'spring-boot-properties'))).to.be.true;
 		});
 
 		test('should not serve Pipes', () => {
