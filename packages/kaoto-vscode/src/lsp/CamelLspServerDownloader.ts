@@ -24,8 +24,8 @@ import { pipeline } from 'stream/promises'; // NOSONAR
  * The Camel Language Server release used by Kaoto, and the SHA-256 of its JAR on Maven Central.
  * Update both together when moving to a new release.
  */
-export const CAMEL_LSP_SERVER_VERSION = '1.35.0';
-const CAMEL_LSP_SERVER_SHA256 = 'fdae586f74afcec5cd2c55f19343f870c88f3613e418fd3840d09d8af18d6270';
+export const CAMEL_LSP_SERVER_VERSION = '1.36.0';
+const CAMEL_LSP_SERVER_SHA256 = '4e35085b7f87e9f6647291a30c5fde8b63e79a2150279f96fc7a12fa61174307';
 
 const MAVEN_CENTRAL_URL = 'https://repo1.maven.org/maven2/com/github/camel-tooling/camel-lsp-server';
 const DOWNLOAD_TIMEOUT_MS = 60_000;
