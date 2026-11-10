@@ -61,10 +61,13 @@ jobs:
         run: |
           # Yarn ignores files outside the workspaces, such as yarn.lock, root configs and workflows, so a change
           # to one of them that isn't documentation selects every workspace. So does a run with nothing to
-          # compare: a manual run or the first push of a branch.
-          if [[ "$BASE" =~ ^0*$ ]] || ! git diff --quiet "$BASE...HEAD" -- . ':(exclude)packages/' ':(exclude)*.md' \
-            ':(exclude)docs/' ':(exclude)_context/' ':(exclude)assets/readme/' ':(exclude).vscode/' \
-            ':(exclude).github/ISSUE_TEMPLATE/' ':(exclude).github/PULL_REQUEST_TEMPLATE/'; then
+          # compare (a manual run or the first push of a branch) and a push that rewrote history: Yarn compares
+          # with the merge base, so it can't see the changes that such a push removed.
+          if [[ "$BASE" =~ ^0*$ ]] ||
+            { [[ "$GITHUB_EVENT_NAME" == push ]] && ! git merge-base --is-ancestor "$BASE" HEAD; } ||
+            ! git diff --quiet "$BASE...HEAD" -- . ':(exclude)packages/' ':(exclude)*.md' \
+              ':(exclude)docs/' ':(exclude)_context/' ':(exclude)assets/readme/' ':(exclude).vscode/' \
+              ':(exclude).github/ISSUE_TEMPLATE/' ':(exclude).github/PULL_REQUEST_TEMPLATE/'; then
             since=()
           else
             since=(--since="$BASE")
