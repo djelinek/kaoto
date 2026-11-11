@@ -14,14 +14,16 @@ jobs:
     outputs:
       none: ${{ steps.lists.outputs.none }}
       some: ${{ steps.lists.outputs.some }}
+      label: ${{ steps.lists.outputs.label }}
     steps:
       - id: lists
         run: |
           echo 'none=[]' >> "$GITHUB_OUTPUT"
           echo 'some=["@probe/one","@probe/two"]' >> "$GITHUB_OUTPUT"
+          echo 'label=Packages' >> "$GITHUB_OUTPUT"
 
-  plain-skipped:
-    name: ${{ matrix.package }}
+  needs-skipped:
+    name: ${{ needs.changes.outputs.label }}
     needs: changes
     if: needs.changes.outputs.none != '[]'
     strategy:
@@ -33,8 +35,8 @@ jobs:
         env:
           PACKAGE: ${{ matrix.package }}
 
-  fallback-skipped:
-    name: ${{ matrix.package || 'Packages' }}
+  short-circuit-skipped:
+    name: ${{ needs.changes.outputs.none == '[]' && 'Packages' || matrix.package }}
     needs: changes
     if: needs.changes.outputs.none != '[]'
     strategy:
@@ -46,8 +48,8 @@ jobs:
         env:
           PACKAGE: ${{ matrix.package }}
 
-  fallback-running:
-    name: ${{ matrix.package || 'Packages' }}
+  short-circuit-running:
+    name: ${{ needs.changes.outputs.some == '[]' && 'Packages' || matrix.package }}
     needs: changes
     if: needs.changes.outputs.some != '[]'
     strategy:
