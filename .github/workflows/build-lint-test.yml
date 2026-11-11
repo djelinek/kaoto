@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       # JSON arrays of workspace names: those that hold a changed file, those plus their dependents, and the
-      # affected ones that the Packages (UI) job checks because they have no job of their own.
+      # affected ones that the Packages (UI, Kompanion) job checks because they have no job of their own.
       changed: ${{ steps.select.outputs.changed }}
       affected: ${{ steps.select.outputs.affected }}
       packages: ${{ steps.select.outputs.packages }}
@@ -78,7 +78,7 @@ jobs:
           list() { yarn workspaces list "${since[@]}" "$@" --json | jq -sc 'map(select(.location != ".") | .name)'; }
           changed=$(list)
           affected=$(list --recursive)
-          packages=$(jq -c 'map(select(IN("vscode-kaoto", "@kaoto/ui-tests-vscode", "@kaoto/kompanion") | not))' <<<"$affected")
+          packages=$(jq -c 'map(select(IN("vscode-kaoto", "@kaoto/ui-tests-vscode") | not))' <<<"$affected")
           {
             echo "changed=$changed"
             echo "affected=$affected"
@@ -88,7 +88,7 @@ jobs:
   # Lint, build and test the affected workspaces with their own package.json scripts. Yarn skips a
   # workspace that doesn't define a script, so a new package needs no change here.
   packages:
-    name: Packages (UI)
+    name: Packages (UI, Kompanion)
     needs: changes
     if: needs.changes.outputs.packages != '[]'
     runs-on: ubuntu-latest
@@ -103,6 +103,13 @@ jobs:
         with:
           node-version: '24.x'
           cache: yarn
+      - name: Set up Java for Kompanion
+        if: contains(fromJSON(needs.changes.outputs.packages), '@kaoto/kompanion')
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
       - name: Install dependencies
         run: yarn install --immutable --mode=skip-build
       - name: Lint
@@ -138,31 +145,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: packages/kaoto-web/coverage/lcov.info
           flags: web
-
-  kompanion:
-    name: Kompanion
-    needs: changes
-    if: contains(fromJSON(needs.changes.outputs.affected), '@kaoto/kompanion')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-        with:
-          node-version: '24.x'
-          cache: yarn
-      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-      - name: Install dependencies
-        run: yarn install --immutable --mode=skip-build
-      - name: Check formatting
-        run: yarn workspace @kaoto/kompanion lint
-      - name: Run unit tests
-        run: yarn workspace @kaoto/kompanion test
 
   # The extension embeds the UI. A change in a package it embeds runs the smoke groups; a change in the
   # extension or its UI tests runs all groups and the deployment tests (KaotoIO/kaoto#3852).
@@ -214,7 +196,7 @@ jobs:
 
   # Keep the existing required check name, including on documentation-only PRs.
   build:
-    needs: [commitlint, changes, packages, kompanion, vscode-smoke, vscode-full, e2e, chromatic]
+    needs: [commitlint, changes, packages, vscode-smoke, vscode-full, e2e, chromatic]
     if: always()
     runs-on: ubuntu-latest
     steps:
