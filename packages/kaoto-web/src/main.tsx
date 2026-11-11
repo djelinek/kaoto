@@ -28,3 +28,4 @@ try {
 } finally {
   document.body.classList.add('ready');
 }
+// CI selection test
