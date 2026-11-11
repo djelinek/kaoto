@@ -458,3 +458,4 @@ Enable the pre-commit hook once per clone to catch violations before they reach 
 
 The port defaults to a random OS-assigned port (`quarkus.http.port=0`). Override with
 `-Dquarkus.http.port=8000` or `QUARKUS_HTTP_PORT=8000` for local development.
+<!-- CI selection test -->
