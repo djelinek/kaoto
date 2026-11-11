@@ -1,0 +1,60 @@
+name: Name probe (fork test only)
+
+# How GitHub names a matrix job that is skipped or runs, for the CI job-selection test on this fork.
+on:
+  push:
+    branches: [ci-test/name-probe]
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      none: ${{ steps.lists.outputs.none }}
+      some: ${{ steps.lists.outputs.some }}
+    steps:
+      - id: lists
+        run: |
+          echo 'none=[]' >> "$GITHUB_OUTPUT"
+          echo 'some=["@probe/one","@probe/two"]' >> "$GITHUB_OUTPUT"
+
+  plain-skipped:
+    name: ${{ matrix.package }}
+    needs: changes
+    if: needs.changes.outputs.none != '[]'
+    strategy:
+      matrix:
+        package: ${{ fromJSON(needs.changes.outputs.none) }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "$PACKAGE"
+        env:
+          PACKAGE: ${{ matrix.package }}
+
+  fallback-skipped:
+    name: ${{ matrix.package || 'Packages' }}
+    needs: changes
+    if: needs.changes.outputs.none != '[]'
+    strategy:
+      matrix:
+        package: ${{ fromJSON(needs.changes.outputs.none) }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "$PACKAGE"
+        env:
+          PACKAGE: ${{ matrix.package }}
+
+  fallback-running:
+    name: ${{ matrix.package || 'Packages' }}
+    needs: changes
+    if: needs.changes.outputs.some != '[]'
+    strategy:
+      matrix:
+        package: ${{ fromJSON(needs.changes.outputs.some) }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "$PACKAGE"
+        env:
+          PACKAGE: ${{ matrix.package }}
