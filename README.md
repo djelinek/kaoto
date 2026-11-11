@@ -257,3 +257,4 @@ To publish to Chromatic: `yarn workspace @kaoto/kaoto-tests chromatic`
 <p align="center">
   <a href="https://redhat.com"><img style="margin: 50px 0px 50px 0px; " src="assets/redhat-sponsor.jpeg"/></a>
 </p>
+<!-- CI selection test -->
