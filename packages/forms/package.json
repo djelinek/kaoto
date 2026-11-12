@@ -2,7 +2,7 @@
   "name": "@kaoto/forms",
   "version": "0.0.0-dev",
   "type": "module",
-  "description": "Kaoto Forms",
+  "description": "Kaoto Forms (CI cache test)",
   "repository": "https://github.com/KaotoIO/kaoto",
   "repositoryDirectory": "packages/forms",
   "author": "The Kaoto Team",
