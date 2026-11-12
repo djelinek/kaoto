@@ -1,0 +1,50 @@
+name: Setup Workspace (kaoto)
+description: Sets up Node.js and the workspace dependencies, restoring the installed node_modules from the cache on Linux
+
+inputs:
+  node-version:
+    description: Node.js version
+    required: false
+    default: '24.x'
+
+runs:
+  using: composite
+  steps:
+    # An install takes about a minute on Linux, most of it linking node_modules, so on Linux the installed result is
+    # cached under a key made of every file that decides what Yarn installs. A hit skips the install; a change to one
+    # of these files misses and installs as before. Jobs on Windows and macOS (VS Code UI tests) always install.
+    - name: Restore node_modules
+      id: node-modules
+      if: runner.os == 'Linux'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          node_modules
+          packages/*/node_modules
+          .yarn/install-state.gz
+        key: node-modules-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('yarn.lock', '.yarnrc.yml', '.yarn/releases/*', 'package.json', 'packages/*/package.json') }}
+
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        # The Yarn cache only serves an install.
+        cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'yarn' || '' }}
+
+    - name: Install dependencies
+      if: steps.node-modules.outputs.cache-hit != 'true'
+      shell: bash
+      run: yarn install --immutable --mode=skip-build
+
+    # Pull request runs only read the cache, so what a PR installs never reaches another run. Pushes to main, the
+    # nightly run and manual runs save it, right after the install and before any build writes into node_modules.
+    - name: Save node_modules
+      if: >-
+        runner.os == 'Linux' && steps.node-modules.outputs.cache-hit != 'true' &&
+        !startsWith(github.event_name, 'pull_request')
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          node_modules
+          packages/*/node_modules
+          .yarn/install-state.gz
+        key: ${{ steps.node-modules.outputs.cache-primary-key }}
