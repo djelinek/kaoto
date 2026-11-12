@@ -126,3 +126,4 @@ export async function deactivate() {
 	await telemetryService.sendShutdownEvent();
 	KaotoOutputChannel.dispose();
 }
+// CI selection test
