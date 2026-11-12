@@ -24,3 +24,4 @@ export * from './pages/Metadata/MetadataPage';
 export * from './pages/PipeErrorHandler/PipeErrorHandlerPage';
 export * from './providers/send-message-modal.provider';
 export * from './webview/editor';
+// CI selection test
