@@ -28,17 +28,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            **/node_modules
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
-
-      # Install dependencies
-      - name: 🔧 Install dependencies
-        run: yarn install --immutable --mode=skip-build
+      - name: 🔧 Setup workspace
+        uses: ./.github/actions/kaoto-setup-workspace
 
       - name: Build packages
         run: yarn workspace @kaoto/kaoto run build:dev
@@ -71,6 +62,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: 🔧 Setup workspace
+        uses: ./.github/actions/kaoto-setup-workspace
+
+      - name: 🔧 Setup Cypress
+        uses: ./.github/actions/kaoto-setup-cypress
+
       - name: 🗄️ Download the UI build folder
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -81,8 +78,8 @@ jobs:
         uses: cypress-io/github-action@c541a95ea92d9239347a2355f2e895cd4b3f8060 # v7.4.6
         with:
           browser: firefox
-          # we have already installed all dependencies above
-          # install: false
+          # The two setup steps above installed the dependencies and the Cypress binary.
+          install: false
           start: yarn workspace @kaoto/kaoto run preview --host
           config: baseUrl=http://localhost:4173
           working-directory: packages/ui-tests
@@ -127,6 +124,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: 🔧 Setup workspace
+        uses: ./.github/actions/kaoto-setup-workspace
+
+      - name: 🔧 Setup Cypress
+        uses: ./.github/actions/kaoto-setup-cypress
+
       - name: 🗄️ Download the UI build folder
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -137,8 +140,8 @@ jobs:
         uses: cypress-io/github-action@c541a95ea92d9239347a2355f2e895cd4b3f8060 # v7.4.6
         with:
           browser: chrome
-          # we have already installed all dependencies above
-          # install: false
+          # The two setup steps above installed the dependencies and the Cypress binary.
+          install: false
           start: yarn workspace @kaoto/kaoto run preview --host
           config: baseUrl=http://localhost:4173
           working-directory: packages/ui-tests
@@ -183,6 +186,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: 🔧 Setup workspace
+        uses: ./.github/actions/kaoto-setup-workspace
+
+      - name: 🔧 Setup Cypress
+        uses: ./.github/actions/kaoto-setup-cypress
+
       - name: 🗄️ Download the UI build folder
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -193,8 +202,8 @@ jobs:
         uses: cypress-io/github-action@c541a95ea92d9239347a2355f2e895cd4b3f8060 # v7.4.6
         with:
           browser: edge
-          # we have already installed all dependencies above
-          # install: false
+          # The two setup steps above installed the dependencies and the Cypress binary.
+          install: false
           start: yarn workspace @kaoto/kaoto run preview --host
           config: baseUrl=http://localhost:4173
           working-directory: packages/ui-tests
