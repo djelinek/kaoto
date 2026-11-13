@@ -1,6 +1,12 @@
 name: Setup Cypress (kaoto)
 description: Puts the binary of the installed Cypress version in place, from the cache when it holds that version. Run kaoto-setup-workspace first.
 
+inputs:
+  cache:
+    description: "'false' installs the binary without reading or saving the cache, as the nightly does."
+    required: false
+    default: 'true'
+
 runs:
   using: composite
   steps:
@@ -18,6 +24,7 @@ runs:
 
     - name: Restore the Cypress binary
       id: binary
+      if: inputs.cache == 'true'
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.cypress.outputs.folder }}
@@ -34,7 +41,9 @@ runs:
 
     # As for node_modules, pull request runs only read the cache.
     - name: Save the Cypress binary
-      if: steps.binary.outputs.cache-hit != 'true' && !startsWith(github.event_name, 'pull_request')
+      if: >-
+        inputs.cache == 'true' && steps.binary.outputs.cache-hit != 'true' &&
+        !startsWith(github.event_name, 'pull_request')
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.cypress.outputs.folder }}

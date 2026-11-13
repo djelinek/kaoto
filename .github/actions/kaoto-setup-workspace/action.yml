@@ -6,6 +6,12 @@ inputs:
     description: Node.js version
     required: false
     default: '24.x'
+  cache:
+    description: >-
+      'false' installs from scratch without reading or saving any cache, as the nightly does, so a package that
+      disappears from the registry fails it instead of hiding behind a cache hit.
+    required: false
+    default: 'true'
 
 runs:
   using: composite
@@ -19,7 +25,7 @@ runs:
     # links are relative, and the Cypress container reads the entry the host jobs saved from another folder.
     - name: Name the workspace folder
       id: folder
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && inputs.cache == 'true'
       shell: bash
       run: echo "key=-$(printf %s "$GITHUB_WORKSPACE" | sha256sum | cut -c1-8)" >> "$GITHUB_OUTPUT"
 
@@ -29,13 +35,13 @@ runs:
     # fails on the outdated lockfile.
     - name: Hash the install's inputs
       id: install-key
-      if: runner.os != 'macOS'
+      if: runner.os != 'macOS' && inputs.cache == 'true'
       shell: bash
       run: node "$GITHUB_ACTION_PATH/install-key.mjs" >> "$GITHUB_OUTPUT"
 
     - name: Restore node_modules
       id: node-modules
-      if: runner.os != 'macOS'
+      if: runner.os != 'macOS' && inputs.cache == 'true'
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
@@ -55,7 +61,7 @@ runs:
     # lacks: it checks every package against the checksums in yarn.lock and removes the ones it no longer uses.
     - name: Restore Yarn's package cache
       id: yarn-cache
-      if: steps.node-modules.outputs.cache-hit != 'true'
+      if: steps.node-modules.outputs.cache-hit != 'true' && inputs.cache == 'true'
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: .yarn/cache
@@ -68,11 +74,10 @@ runs:
       run: yarn install --immutable --mode=skip-build
 
     # Pull request runs only read the caches, so nothing a PR installs reaches another run or takes up cache storage.
-    # Pushes to main, the nightly run and manual runs save them, right after the install and before any build writes
-    # into node_modules.
+    # Pushes to main and manual runs save them, right after the install and before any build writes into node_modules.
     - name: Save node_modules
       if: >-
-        runner.os != 'macOS' && steps.node-modules.outputs.cache-hit != 'true' &&
+        runner.os != 'macOS' && inputs.cache == 'true' && steps.node-modules.outputs.cache-hit != 'true' &&
         !startsWith(github.event_name, 'pull_request')
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
@@ -84,8 +89,8 @@ runs:
 
     - name: Save Yarn's package cache
       if: >-
-        steps.node-modules.outputs.cache-hit != 'true' && steps.yarn-cache.outputs.cache-hit != 'true' &&
-        !startsWith(github.event_name, 'pull_request')
+        inputs.cache == 'true' && steps.node-modules.outputs.cache-hit != 'true' &&
+        steps.yarn-cache.outputs.cache-hit != 'true' && !startsWith(github.event_name, 'pull_request')
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: .yarn/cache
