@@ -141,6 +141,25 @@ const commonConfig = (env) => {
 
 const webviewDist = path.resolve(__dirname, '../ui/dist-webview');
 
+// CI's VSIX build sets KAOTO_WEBPACK_CACHE_DIR to keep webpack's cache between runs (kaoto-vscode-build-lint-test.yml).
+// Webpack checks every cached module against its sources and node_modules, so an older cache only means more to
+// rebuild. A module taken from the cache is not type-checked again; the extension's Packages job builds without the
+// cache, so type errors still fail CI there. Each configuration needs a cache of its own.
+const cacheConfig = (env, name) => {
+  const cacheDirectory = process.env.KAOTO_WEBPACK_CACHE_DIR;
+  if (!cacheDirectory) {
+    return {};
+  }
+  return {
+    cache: {
+      type: 'filesystem',
+      cacheDirectory,
+      name: `${name}-${getEnvConfig(env).mode}`,
+      buildDependencies: { config: [__filename] },
+    },
+  };
+};
+
 const webpack = (env) => {
   // Live mode serves the webview from the Vite dev server, so a development build may skip the bundle.
   // build:prod always builds it first, so a release never ships without one.
@@ -151,7 +170,7 @@ const webpack = (env) => {
     );
   }
   return [
-    merge(commonConfig(env), {
+    merge(commonConfig(env), cacheConfig(env, 'extension'), {
       target: 'node',
       entry: {
         'extension/extension': './src/extension/extension.ts',
@@ -165,7 +184,7 @@ const webpack = (env) => {
         }),
       ],
     }),
-    merge(commonConfig(env), {
+    merge(commonConfig(env), cacheConfig(env, 'extension-web'), {
       target: 'webworker',
       entry: {
         'extension/extensionWeb': './src/extension/extensionWeb.ts',

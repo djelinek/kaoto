@@ -41,8 +41,28 @@ jobs:
       - name: Setup workspace
         uses: ./.github/actions/kaoto-setup-workspace
 
+      # Webpack takes most of this job's build, and every UI test job waits for the VSIX. Its cache holds the built
+      # modules and is checked against the sources, so the key only changes with yarn.lock and the webpack config, and
+      # a new key starts from the latest entry. Only a push saves, after the build.
+      - name: Restore webpack cache
+        id: webpack-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/webpack-cache
+          key: webpack-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('yarn.lock', 'packages/kaoto-vscode/webpack.config.js') }}
+          restore-keys: webpack-${{ runner.os }}-${{ runner.arch }}-
+
       - name: Build webview and extension
         run: yarn workspace vscode-kaoto build
+        env:
+          KAOTO_WEBPACK_CACHE_DIR: ${{ runner.temp }}/webpack-cache
+
+      - name: Save webpack cache
+        if: steps.webpack-cache.outputs.cache-hit != 'true' && github.event_name == 'push'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/webpack-cache
+          key: ${{ steps.webpack-cache.outputs.cache-primary-key }}
 
       - name: Build VSIX
         run: yarn workspace vscode-kaoto build:vsix --out kaoto-ci.vsix
