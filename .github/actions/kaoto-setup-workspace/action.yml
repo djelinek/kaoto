@@ -1,0 +1,94 @@
+name: Setup Workspace (kaoto)
+description: Sets up Node.js and the workspace dependencies, restoring the installed node_modules from the cache on Linux and Windows
+
+inputs:
+  node-version:
+    description: Node.js version
+    required: false
+    default: '24.x'
+
+runs:
+  using: composite
+  steps:
+    # Node.js is set up first, so the hash below runs on it: on the runners' preinstalled Node.js the hash took about
+    # 3 s on Windows instead of 0.2 s. setup-node would save Yarn's package cache from pull request runs too, so the
+    # steps below handle it instead.
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        package-manager-cache: false
+
+    # An install takes about a minute on Linux and about two on Windows, most of it linking node_modules, so the
+    # installed result is cached under a key made of what decides what Yarn installs. A hit skips the install; a
+    # change to one of these inputs misses and installs as before. The nightly's macOS jobs always install.
+    # On Windows Yarn links the workspace packages into node_modules with junctions, which hold absolute paths, and a
+    # restore brings them back as symbolic links to the same folders. The key names the workspace folder there, so a
+    # runner that checks out elsewhere misses and installs instead of restoring links to a folder it lacks. Linux
+    # links are relative, and the Cypress container reads the entry the host jobs saved from another folder.
+    - name: Name the workspace folder
+      id: folder
+      if: runner.os == 'Windows'
+      shell: bash
+      run: echo "key=-$(printf %s "$GITHUB_WORKSPACE" | sha256sum | cut -c1-8)" >> "$GITHUB_OUTPUT"
+
+    # The inputs are yarn.lock, Yarn's settings and release, and the fields of each package.json that the install
+    # reads (install-key.mjs), so a change to a script, a version or the VS Code extension's contributions keeps the
+    # entry. A dependency changed in a package.json without yarn.lock still changes the key, so the install runs and
+    # fails on the outdated lockfile.
+    - name: Hash the install's inputs
+      id: install-key
+      if: runner.os != 'macOS'
+      shell: bash
+      run: node "$GITHUB_ACTION_PATH/install-key.mjs" >> "$GITHUB_OUTPUT"
+
+    - name: Restore node_modules
+      id: node-modules
+      if: runner.os != 'macOS'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          node_modules
+          packages/*/node_modules
+          .yarn/install-state.gz
+        key: node-modules-${{ runner.os }}-${{ runner.arch }}${{ steps.folder.outputs.key }}-${{ steps.install-key.outputs.key }}
+
+    # An install fetches the packages from Yarn's package cache (.yarn/cache), cached under a key made of yarn.lock.
+    # When yarn.lock changed, the latest cache saved from main is restored instead and Yarn downloads only what it
+    # lacks: it checks every package against the checksums in yarn.lock and removes the ones it no longer uses.
+    - name: Restore Yarn's package cache
+      id: yarn-cache
+      if: steps.node-modules.outputs.cache-hit != 'true'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: .yarn/cache
+        key: yarn-cache-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('yarn.lock') }}
+        restore-keys: yarn-cache-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Install dependencies
+      if: steps.node-modules.outputs.cache-hit != 'true'
+      shell: bash
+      run: yarn install --immutable --mode=skip-build
+
+    # Pull request runs only read the caches, so nothing a PR installs reaches another run or takes up cache storage.
+    # Pushes to main, the nightly run and manual runs save them, right after the install and before any build writes
+    # into node_modules.
+    - name: Save node_modules
+      if: >-
+        runner.os != 'macOS' && steps.node-modules.outputs.cache-hit != 'true' &&
+        !startsWith(github.event_name, 'pull_request')
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          node_modules
+          packages/*/node_modules
+          .yarn/install-state.gz
+        key: ${{ steps.node-modules.outputs.cache-primary-key }}
+
+    - name: Save Yarn's package cache
+      if: >-
+        steps.node-modules.outputs.cache-hit != 'true' && steps.yarn-cache.outputs.cache-hit != 'true' &&
+        !startsWith(github.event_name, 'pull_request')
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: .yarn/cache
+        key: ${{ steps.yarn-cache.outputs.cache-primary-key }}
