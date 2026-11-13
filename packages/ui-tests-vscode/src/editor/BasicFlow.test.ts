@@ -259,3 +259,4 @@ async function checkStepWithTestIdOrNodeLabelPresent(driver: WebDriver, testId: 
 async function checkIntegrationNameInTopBarLoaded(driver: WebDriver, name: string) {
 	await KaotoEditor.waitForIntegrationName(driver, name);
 }
+// CI selection test
