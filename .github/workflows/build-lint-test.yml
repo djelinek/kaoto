@@ -106,7 +106,19 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: maven
+      # Kompanion's Maven repository and the Maven its wrapper downloads, under a key made of its pom.xml files and
+      # the wrapper's properties. setup-java's own cache hashes every pom.xml in the checkout, node_modules included,
+      # which took about 23 s, and saves from pull requests too. A new key starts from an empty repository, since
+      # Maven never removes what the build no longer uses. Only a push saves, after the tests passed.
+      - name: Restore Kompanion's Maven downloads
+        id: kompanion-maven
+        if: matrix.package == '@kaoto/kompanion'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.m2/wrapper/dists
+          key: kompanion-maven-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packages/kompanion/pom.xml', 'packages/kompanion/*/pom.xml', 'packages/kompanion/*/*/pom.xml', 'packages/kompanion/.mvn/wrapper/maven-wrapper.properties') }}
       # The tests of the VS Code extension start VS Code, which needs unprivileged user namespaces on Ubuntu and
       # a display. The display runs until the job ends; the other workspaces need neither.
       - name: Set up VS Code for the extension's tests
@@ -125,6 +137,16 @@ jobs:
         run: yarn workspaces foreach --all --include "$PACKAGE" run build:lib
       - name: Test
         run: yarn workspaces foreach --all --include "$PACKAGE" run test
+      - name: Save Kompanion's Maven downloads
+        if: >-
+          matrix.package == '@kaoto/kompanion' && steps.kompanion-maven.outputs.cache-hit != 'true' &&
+          github.event_name == 'push'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.m2/wrapper/dists
+          key: ${{ steps.kompanion-maven.outputs.cache-primary-key }}
       # Codecov gets the package's report under its own flag (.github/codecov.yaml). A new package needs an
       # upload and a flag of its own to report coverage.
       - name: Upload UI coverage
