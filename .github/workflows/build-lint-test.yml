@@ -24,12 +24,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-        with:
-          node-version: '24.x'
-          cache: yarn
-      - name: Install dependencies
-        run: yarn install --immutable --mode=skip-build
+      - uses: ./.github/actions/kaoto-setup-workspace
       - name: Validate PR commits
         run: yarn commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
@@ -104,10 +99,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-        with:
-          node-version: '24.x'
-          cache: yarn
+      - uses: ./.github/actions/kaoto-setup-workspace
       - name: Set up Java for Kompanion
         if: matrix.package == '@kaoto/kompanion'
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
@@ -123,8 +115,6 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           Xvfb :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
           echo "DISPLAY=:99" >> "$GITHUB_ENV"
-      - name: Install dependencies
-        run: yarn install --immutable --mode=skip-build
       - name: Lint
         run: yarn workspaces foreach --all --include "$PACKAGE" run lint
       - name: Lint styles
