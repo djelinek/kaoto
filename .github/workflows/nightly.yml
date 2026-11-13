@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+# The nightly restores and saves none of the caches of kaoto-setup-workspace, kaoto-setup-cypress and the UI test
+# groups: it installs node_modules and the Cypress binary and downloads the groups' Maven and JBang artifacts from the
+# registries. Every other run restores them, and a hit never asks the registries, so a package or artifact that
+# disappears upstream fails the nightly instead of the next release.
 jobs:
   ui-e2e:
     name: UI E2E (all browsers)
@@ -15,6 +19,7 @@ jobs:
     with:
       full-matrix: true
       include-weekly-tests: true
+      use-cache: false
     secrets: inherit
 
   vscode:
@@ -23,3 +28,4 @@ jobs:
     with:
       run-full-ui-tests: true
       full-matrix: true
+      use-cache: false

@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: true
+      use-cache:
+        description: Restore node_modules and the UI test groups' downloads from the cache and save them
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -40,6 +45,8 @@ jobs:
 
       - name: Setup workspace
         uses: ./.github/actions/kaoto-setup-workspace
+        with:
+          cache: ${{ inputs.use-cache }}
 
       - name: Build webview and extension
         run: yarn workspace vscode-kaoto build
@@ -61,3 +68,4 @@ jobs:
     with:
       vsix-artifact-name: vscode-kaoto-vsix
       matrix: ${{ needs.vsix.outputs.ui-test-matrix }}
+      use-cache: ${{ inputs.use-cache }}
