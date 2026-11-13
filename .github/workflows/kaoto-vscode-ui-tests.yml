@@ -21,6 +21,11 @@ on:
         required: false
         type: number
         default: 2
+      use-cache:
+        description: Restore node_modules and the groups' Maven and JBang downloads from the cache and save them
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -41,6 +46,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/kaoto-setup-workspace
+        with:
+          cache: ${{ inputs.use-cache }}
       - uses: ./.github/actions/kaoto-vscode-setup-tools
         with:
           install-jbang: 'true'
@@ -52,6 +59,7 @@ jobs:
       # repository rather than an older entry, since Maven never removes what a group no longer uses.
       - name: Restore Maven and JBang downloads
         id: downloads
+        if: inputs.use-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -90,7 +98,7 @@ jobs:
       # runs the groups and operating systems of a pull request, so the nightly's Linux and macOS groups, which only
       # the nightly would read, take up no cache storage.
       - name: Save Maven and JBang downloads
-        if: steps.downloads.outputs.cache-hit != 'true' && github.event_name == 'push'
+        if: inputs.use-cache && steps.downloads.outputs.cache-hit != 'true' && github.event_name == 'push'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |

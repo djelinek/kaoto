@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+# The nightly reads and saves no cache: it installs, downloads and builds everything from scratch, as a release does.
+# Every other run restores node_modules, the Cypress binary and the UI test groups' downloads, and a hit never asks
+# the registries, so a package or artifact that disappears upstream fails the nightly instead of the next release.
 jobs:
   ui-e2e:
     name: UI E2E (all browsers)
@@ -15,6 +18,7 @@ jobs:
     with:
       full-matrix: true
       include-weekly-tests: true
+      use-cache: false
     secrets: inherit
 
   vscode:
@@ -23,3 +27,4 @@ jobs:
     with:
       run-full-ui-tests: true
       full-matrix: true
+      use-cache: false

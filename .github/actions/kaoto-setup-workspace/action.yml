@@ -6,6 +6,12 @@ inputs:
     description: Node.js version
     required: false
     default: '24.x'
+  cache:
+    description: >-
+      'false' installs from scratch without reading or saving any cache, as the nightly does, so a package that
+      disappears from the registry fails it instead of hiding behind a cache hit.
+    required: false
+    default: 'true'
 
 runs:
   using: composite
@@ -15,7 +21,7 @@ runs:
     # install; a change to one of these files misses and installs as before. The nightly's macOS jobs always install.
     - name: Restore node_modules
       id: node-modules
-      if: runner.os != 'macOS'
+      if: runner.os != 'macOS' && inputs.cache == 'true'
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
@@ -35,7 +41,7 @@ runs:
     # lacks: it checks every package against the checksums in yarn.lock and removes the ones it no longer uses.
     - name: Restore Yarn's package cache
       id: yarn-cache
-      if: steps.node-modules.outputs.cache-hit != 'true'
+      if: steps.node-modules.outputs.cache-hit != 'true' && inputs.cache == 'true'
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: .yarn/cache
@@ -52,7 +58,7 @@ runs:
     # into node_modules.
     - name: Save node_modules
       if: >-
-        runner.os != 'macOS' && steps.node-modules.outputs.cache-hit != 'true' &&
+        runner.os != 'macOS' && inputs.cache == 'true' && steps.node-modules.outputs.cache-hit != 'true' &&
         !startsWith(github.event_name, 'pull_request')
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
@@ -64,8 +70,8 @@ runs:
 
     - name: Save Yarn's package cache
       if: >-
-        steps.node-modules.outputs.cache-hit != 'true' && steps.yarn-cache.outputs.cache-hit != 'true' &&
-        !startsWith(github.event_name, 'pull_request')
+        inputs.cache == 'true' && steps.node-modules.outputs.cache-hit != 'true' &&
+        steps.yarn-cache.outputs.cache-hit != 'true' && !startsWith(github.event_name, 'pull_request')
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: .yarn/cache
