@@ -3,6 +3,8 @@ name: 🌙 Nightly Tests — full matrix on main
 on:
   schedule:
     - cron: '0 2 * * *'
+  push:
+    branches: [ci-test/cache6-nightly]
   workflow_dispatch:
 
 permissions:
