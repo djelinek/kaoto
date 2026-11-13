@@ -68,6 +68,14 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: Set-DisplayResolution -Width 1920 -Height 1080 -Force
+      # Fork test only: whether the workspace links in node_modules came back as links after a cache restore.
+      - name: Show workspace links (fork test)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          foreach ($p in 'node_modules/vscode-kaoto', 'node_modules/@kaoto/kaoto', 'node_modules/@kaoto/forms') {
+            if (Test-Path $p) { Get-Item $p | Format-List FullName, LinkType, Target } else { "missing: $p" }
+          }
       - name: Run ${{ matrix.group }} tests
         shell: bash
         env:
