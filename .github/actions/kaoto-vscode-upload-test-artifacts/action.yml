@@ -1,5 +1,5 @@
 name: Upload Test Artifacts (kaoto-vscode)
-description: Uploads VS Code logs and screenshots from the kaoto-vscode test run on failure
+description: Uploads VS Code logs and screenshots from the kaoto-vscode test run when it failed or was cancelled
 
 inputs:
   test-group:
