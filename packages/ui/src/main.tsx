@@ -13,3 +13,4 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
 
   <RouterProvider router={router} />,
 );
+// Fork test of the CI job selection: a change in the UI library runs only the VS Code smoke groups.
