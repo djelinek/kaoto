@@ -13,7 +13,7 @@ on:
         type: string
         default: kaoto-ci.vsix
       matrix:
-        description: The test groups and OSes to run, as the JSON matrix from the kaoto-vscode-ui-test-matrix action
+        description: The test groups and OSes to run, and whether each group needs JBang, as the JSON matrix from the kaoto-vscode-ui-test-matrix action
         required: true
         type: string
       retention-days:
@@ -33,7 +33,7 @@ permissions:
 jobs:
   # One job per test group and OS, so a run lists only the groups that run. The kaoto-vscode-ui-test-matrix action
   # builds the matrix from the `ciTestGroups` field in the package.json of @kaoto/ui-tests-vscode, which lists every
-  # group, the smoke groups and the Linux-only ones (see that package's README).
+  # group, the smoke groups, the Linux-only ones and the ones that need no JBang (see that package's README).
   ui-tests:
     name: ${{ matrix.group }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -50,16 +50,17 @@ jobs:
           cache: ${{ inputs.use-cache }}
       - uses: ./.github/actions/kaoto-vscode-setup-tools
         with:
-          install-jbang: 'true'
+          install-jbang: ${{ matrix.jbang }}
           allow-unprivileged-userns: 'true'
       # Through Camel JBang the extension downloads Camel, its plugins and the dependencies of the test projects into
       # the local Maven repository, Citrus does the same, and JBang compiles the scripts it runs into its cache. Each
       # group caches both for its OS under a key made of the Camel catalog package, whose catalogs decide the Camel
       # versions the extension asks for, and the pom.xml files of the test projects. A new key starts from an empty
-      # repository rather than an older entry, since Maven never removes what a group no longer uses.
+      # repository rather than an older entry, since Maven never removes what a group no longer uses. A group without
+      # JBang downloads nothing there.
       - name: Restore Maven and JBang downloads
         id: downloads
-        if: inputs.use-cache
+        if: inputs.use-cache && matrix.jbang
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -98,7 +99,7 @@ jobs:
       # runs the groups and operating systems of a pull request, so the nightly's Linux and macOS groups, which only
       # the nightly would read, take up no cache storage.
       - name: Save Maven and JBang downloads
-        if: inputs.use-cache && steps.downloads.outputs.cache-hit != 'true' && github.event_name == 'push'
+        if: inputs.use-cache && matrix.jbang && steps.downloads.outputs.cache-hit != 'true' && github.event_name == 'push'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
