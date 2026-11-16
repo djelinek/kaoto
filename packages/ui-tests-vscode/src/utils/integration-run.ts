@@ -30,7 +30,7 @@ import {
 /** Register the same integration assertions for local execution and Linux deployment. */
 export function integrationRunTests(label: 'Run' | 'Deploy'): void {
 	describe(`Integrations View: ${label}`, function () {
-		this.timeout(1_200_000);
+		this.timeout(900_000); // 15 minutes
 		const workspaceFolder = join(__dirname, '../../test Fixture with speci@l chars', 'kaoto-view');
 		let driver: WebDriver;
 		let kaotoViewContainer: ViewControl | undefined;
