@@ -305,7 +305,7 @@
       },
       {
         "command": "kaoto.selectCamelCatalog",
-        "title": "Select Camel Catalog Version",
+        "title": "Select the Camel Catalog Version",
         "category": "Kaoto"
       },
       {
