@@ -49,13 +49,10 @@ jobs:
       - name: '🔧 Build @kaoto/kaoto package in lib mode'
         run: yarn workspace @kaoto/kaoto run build:lib
 
-      - name: '📤 Version and publish'
+      - name: '📤 Publish to npm'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           if npm view "@kaoto/kaoto@${RELEASE_TAG}" version > /dev/null 2>&1; then
             echo "Version ${RELEASE_TAG} already published on NPM, skipping."
           else

@@ -32,7 +32,7 @@ jobs:
       - name: '🔧 Build @kaoto/forms package'
         run: yarn workspace @kaoto/forms run build
 
-      - name: '📤 Version and publish'
+      - name: '📤 Publish to npm'
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
