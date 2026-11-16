@@ -23,7 +23,7 @@ jobs:
 
   vscode:
     name: VS Code integration (all platforms)
-    uses: ./.github/workflows/kaoto-vscode-build-lint-test.yml
+    uses: ./.github/workflows/kaoto-vscode.yml
     with:
       run-full-ui-tests: true
       full-matrix: true

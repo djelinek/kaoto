@@ -1,4 +1,4 @@
-name: 🧪 VS Code Kaoto Integration Tests
+name: 🧪 VS Code — UI tests
 
 on:
   workflow_call:

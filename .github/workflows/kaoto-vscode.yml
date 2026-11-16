@@ -1,4 +1,4 @@
-name: 🏗️ VS Code Kaoto Build
+name: 🏗️ VS Code — VSIX and UI tests
 
 on:
   workflow_call:

@@ -1,4 +1,4 @@
-name: 📦 Build npm Package
+name: ✅ CI — build, lint and test
 
 on:
   push:
@@ -156,7 +156,7 @@ jobs:
     name: VS Code
     needs: changes
     if: contains(fromJSON(needs.changes.outputs.affected), '@kaoto/ui-tests-vscode')
-    uses: ./.github/workflows/kaoto-vscode-build-lint-test.yml
+    uses: ./.github/workflows/kaoto-vscode.yml
     with:
       run-full-ui-tests: >-
         ${{ contains(fromJSON(needs.changes.outputs.changed), 'vscode-kaoto') ||
