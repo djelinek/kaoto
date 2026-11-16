@@ -23,10 +23,6 @@ jobs:
       - name: 🔧 Setup workspace
         uses: ./.github/actions/kaoto-setup-workspace
 
-      # 👇 Builds the kaoto/ui in library mode
-      - name: Build ui library
-        run: yarn workspace @kaoto/kaoto run build:lib
-
       # 👇 Remove ui-mockups directory from stories
       - name: Remove ui-mockups directory
         run: rm -rf packages/ui-tests/stories/ui-mockups

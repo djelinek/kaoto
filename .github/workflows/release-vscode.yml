@@ -64,9 +64,6 @@ jobs:
           full: 'true'
           all-os: 'true'
 
-      - name: '🔧 Build UI lib'
-        run: yarn workspace @kaoto/kaoto build:lib
-
       - name: '🔧 Build webview, build and lint extension'
         run: yarn workspace vscode-kaoto build:prod
 

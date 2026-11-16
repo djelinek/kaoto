@@ -34,10 +34,6 @@ jobs:
       - name: Build packages
         run: yarn workspace @kaoto/kaoto run build:dev
 
-      # Build lib
-      - name: Build @kaoto/kaoto package in lib mode
-        run: yarn workspace @kaoto/kaoto run build:lib
-
       - name: 💾 Save build folder
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
