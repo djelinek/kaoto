@@ -16,6 +16,12 @@ inputs:
 runs:
   using: composite
   steps:
+    # setup-node would save Yarn's package cache from pull request runs too, so the steps below handle it instead.
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        package-manager-cache: false
+
     # An install takes about a minute on Linux and about two on Windows, most of it linking node_modules, so the
     # installed result is cached under a key made of what decides what Yarn installs. A hit skips the install; a
     # change to one of these inputs misses and installs as before. The nightly's macOS jobs always install.
@@ -49,12 +55,6 @@ runs:
           packages/*/node_modules
           .yarn/install-state.gz
         key: node-modules-${{ runner.os }}-${{ runner.arch }}${{ steps.folder.outputs.key }}-${{ steps.install-key.outputs.key }}
-
-    # setup-node would save Yarn's package cache from pull request runs too, so the steps below handle it instead.
-    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-      with:
-        node-version: ${{ inputs.node-version }}
-        package-manager-cache: false
 
     # An install fetches the packages from Yarn's package cache (.yarn/cache), cached under a key made of yarn.lock.
     # When yarn.lock changed, the latest cache saved from main is restored instead and Yarn downloads only what it
