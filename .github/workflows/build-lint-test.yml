@@ -2,7 +2,7 @@ name: 📦 Build npm Package
 
 on:
   push:
-    branches: [main]
+    branches: [main, ci-test/cache8-before, ci-test/cache8-after]
   pull_request:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
