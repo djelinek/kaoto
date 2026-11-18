@@ -127,4 +127,4 @@ export async function deactivate() {
 	KaotoOutputChannel.dispose();
 }
 
-// CI cache test (fork only): a change in the VS Code extension only.
+// CI cache test (fork only): a change in the VS Code extension only (second push).
