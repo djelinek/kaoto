@@ -43,10 +43,8 @@ jobs:
         with:
           release-tag: ${{ inputs.release_tag }}
 
-      - name: '🔧 Setup VS Code system tools'
-        uses: ./.github/actions/kaoto-vscode-setup-tools
-        with:
-          allow-unprivileged-userns: 'true'
+      - name: '🔧 Set up a display for VS Code'
+        uses: ./.github/actions/kaoto-vscode-setup-display
 
       - name: '🔢 Compute VSIX filename'
         id: compute
@@ -68,7 +66,7 @@ jobs:
         run: yarn workspace vscode-kaoto build:prod
 
       - name: '🧪 Run unit tests'
-        run: xvfb-run -a yarn workspace vscode-kaoto test:unit
+        run: yarn workspace vscode-kaoto test:unit
 
       - name: '📦 Build release VSIX'
         env:

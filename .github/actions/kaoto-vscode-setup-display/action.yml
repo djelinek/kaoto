@@ -1,0 +1,20 @@
+name: Setup Display (kaoto-vscode)
+description: Gives VS Code a display for the rest of the job. On Linux it starts a virtual display and allows the unprivileged user namespaces that VS Code needs on Ubuntu; on Windows it raises the screen resolution.
+
+runs:
+  using: composite
+  steps:
+    # The same screen that xvfb-run starts on Ubuntu, but it stays up until the job ends, so any later step can start
+    # VS Code.
+    - name: Start a virtual display
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+        Xvfb :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
+        echo "DISPLAY=:99" >> "$GITHUB_ENV"
+
+    - name: Set the display resolution
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: Set-DisplayResolution -Width 1920 -Height 1080 -Force

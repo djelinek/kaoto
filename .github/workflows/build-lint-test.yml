@@ -90,14 +90,10 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      # The tests of the VS Code extension start VS Code, which needs unprivileged user namespaces on Ubuntu and
-      # a display. The display runs until the job ends; the other workspaces need neither.
-      - name: Set up VS Code for the extension's tests
+      # The tests of the VS Code extension start VS Code; the other workspaces need no display.
+      - name: Set up a display for the extension's tests
         if: matrix.package == 'vscode-kaoto'
-        run: |
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-          Xvfb :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
-          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+        uses: ./.github/actions/kaoto-vscode-setup-display
       # After Java: setup-java keys its Maven cache on every pom.xml in the checkout, which takes about 2 s before
       # node_modules is in place and about 28 s after.
       - uses: ./.github/actions/kaoto-setup-workspace

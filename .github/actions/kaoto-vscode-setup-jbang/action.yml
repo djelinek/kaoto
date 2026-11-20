@@ -1,0 +1,27 @@
+name: Setup JBang (kaoto-vscode)
+description: Sets up Java and JBang for the VS Code UI test groups that run Camel JBang, and trusts the Camel and Citrus scripts that they run
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+      with:
+        distribution: temurin
+        java-version: '21'
+
+    - name: Setup JBang
+      if: ${{ runner.os != 'Windows' }}
+      uses: jbangdev/setup-jbang@2b1b465a7b75f4222b81426f23a01e013aa7b95c # v0.1.1
+
+    - name: Setup JBang (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: choco install jbang
+
+    - name: Add Camel trusted source to JBang
+      shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
+      run: jbang trust add https://github.com/apache/camel/
+
+    - name: Add Citrus trusted source to JBang
+      shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
+      run: jbang trust add https://github.com/citrusframework/citrus/
