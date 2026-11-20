@@ -107,15 +107,9 @@ jobs:
       - call-release-forms
       - call-release-ui
       - call-release-container
-    # !cancelled() prevents tagging and releasing when the workflow is cancelled while still
-    # allowing tag-and-release to run when Forms, UI or Container jobs are skipped on snapshot runs.
-    if: |
-      !cancelled() &&
-      needs.setup.result == 'success' &&
-      needs.call-release-vscode.result == 'success' &&
-      (needs.call-release-forms.result == 'success' || needs.call-release-forms.result == 'skipped') &&
-      (needs.call-release-ui.result == 'success' || needs.call-release-ui.result == 'skipped') &&
-      (needs.call-release-container.result == 'success' || needs.call-release-container.result == 'skipped')
+    # Also when the Forms, UI and container jobs are skipped, as in a snapshot release, but not when a job before it
+    # failed or was cancelled.
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
 
     steps:
       - name: '🛰️ Checkout source code'

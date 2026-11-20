@@ -49,12 +49,6 @@ jobs:
       - name: '🔧 Build @kaoto/kaoto package in lib mode'
         run: yarn workspace @kaoto/kaoto run build:lib
 
+      # Yarn skips a version that the registry already has, as when a release runs again.
       - name: '📤 Publish to npm'
-        env:
-          RELEASE_TAG: ${{ inputs.release_tag }}
-        run: |
-          if npm view "@kaoto/kaoto@${RELEASE_TAG}" version > /dev/null 2>&1; then
-            echo "Version ${RELEASE_TAG} already published on NPM, skipping."
-          else
-            yarn workspace @kaoto/kaoto npm publish --access public
-          fi
+        run: yarn workspace @kaoto/kaoto npm publish --access public --tolerate-republish
