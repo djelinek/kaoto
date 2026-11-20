@@ -16,6 +16,7 @@
 import { getRedHatService, TelemetryService } from '@redhat-developer/vscode-redhat-telemetry';
 import * as vscode from 'vscode';
 import { VIEW_HELP } from '../constants';
+// CI cache test on this fork: the tenth round, VS Code and ChromeDriver from the cache.
 import { KaotoOutputChannel } from './KaotoOutputChannel';
 import { PortManager } from '../services/PortManager';
 import { CamelExecutorFactory } from '../executors/CamelExecutorFactory';
