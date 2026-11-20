@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { after, before, describe, test } from 'node:test';
 
 import { git } from './git-client.mjs';
-import { listWorkspaces, selectsEveryWorkspace } from './select-ci-jobs.mjs';
+import { lastFinishedPushRun, listWorkspaces, selectsEveryWorkspace } from './select-ci-jobs.mjs';
 
 describe('selectsEveryWorkspace', () => {
   const root = process.cwd();
@@ -75,4 +75,57 @@ test('listWorkspaces lists the workspaces by name, without the root', () => {
   assert.ok(workspaces.includes('@kaoto/kaoto'));
   assert.ok(workspaces.includes('vscode-kaoto'));
   assert.ok(!workspaces.includes('kaoto'));
+});
+
+describe('lastFinishedPushRun', () => {
+  const environment = {
+    GITHUB_API_URL: 'https://api.github.com',
+    GITHUB_REPOSITORY: 'KaotoIO/kaoto',
+    GITHUB_WORKFLOW_REF: 'KaotoIO/kaoto/.github/workflows/build-lint-test.yml@refs/heads/main',
+    GITHUB_REF_NAME: 'main',
+    GITHUB_TOKEN: 'token',
+  };
+
+  /** A fetch that answers with runs of the given conclusions, the newest first, and records the request. */
+  function runs(...conclusions) {
+    const fetchRuns = async (url, options) => {
+      Object.assign(fetchRuns, { url: url.href, options });
+      const workflowRuns = conclusions.map((conclusion, index) => ({ conclusion, head_sha: `commit${index}` }));
+      return { ok: true, json: async () => ({ workflow_runs: workflowRuns }) };
+    };
+    return fetchRuns;
+  }
+
+  test("asks for the finished push runs of the run's workflow on the pushed branch", async () => {
+    const fetchRuns = runs();
+    await lastFinishedPushRun(environment, fetchRuns);
+    assert.equal(
+      fetchRuns.url,
+      'https://api.github.com/repos/KaotoIO/kaoto/actions/workflows/build-lint-test.yml/runs?branch=main&event=push&status=completed&per_page=100',
+    );
+    assert.equal(fetchRuns.options.headers.Authorization, 'Bearer token');
+  });
+
+  test('returns the commit of the newest run that passed or failed', async () => {
+    assert.equal(
+      await lastFinishedPushRun(environment, runs('cancelled', 'cancelled', 'failure', 'success')),
+      'commit2',
+    );
+    assert.equal(await lastFinishedPushRun(environment, runs('success', 'failure')), 'commit0');
+  });
+
+  test('returns nothing without such a run, so that every workspace is selected', async () => {
+    assert.equal(await lastFinishedPushRun(environment, runs()), '');
+    assert.equal(await lastFinishedPushRun(environment, runs('cancelled')), '');
+  });
+
+  test("returns nothing if the runs can't be listed", async () => {
+    assert.equal(await lastFinishedPushRun(environment, async () => ({ ok: false, status: 403 })), '');
+    assert.equal(
+      await lastFinishedPushRun(environment, async () => {
+        throw new Error('getaddrinfo ENOTFOUND api.github.com');
+      }),
+      '',
+    );
+  });
 });

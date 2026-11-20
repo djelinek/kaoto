@@ -7,6 +7,8 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
+# A newer push cancels the run of the older one, on main too. The next run on main then also tests what the cancelled
+# one would have, see the changes job.
 concurrency:
   group: monorepo-ci-${{ github.ref }}
   cancel-in-progress: true
@@ -32,6 +34,9 @@ jobs:
   changes:
     name: Select CI jobs
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     outputs:
       # JSON arrays of workspace names: those that hold a changed file, and those plus their dependents.
       changed: ${{ steps.select.outputs.changed }}
@@ -51,8 +56,9 @@ jobs:
       - name: Select affected workspaces
         id: select
         env:
-          # The upstream base commit of a PR, or the commit before a push. A manual run has none.
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          # The upstream base commit of a PR. A push reads its base from the earlier runs, and a manual run has none.
+          BASE: ${{ github.event.pull_request.base.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: node .github/scripts/select-ci-jobs.mjs
 
   # Lint, build and test each affected workspace in a job of its own, shown as e.g. "Packages (@kaoto/forms)",
