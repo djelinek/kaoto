@@ -213,16 +213,15 @@ jobs:
               gh cache delete "$id" || echo "::warning::Could not delete $key, which GitHub may have evicted already"
             done
 
-  # Keep the existing required check name, including on documentation-only PRs.
+  # Keep the existing required check name, including on documentation-only PRs. It fails when the jobs couldn't be
+  # selected or a selected job failed or was cancelled; the jobs that weren't selected are skipped.
   build:
     needs: [commitlint, changes, packages, vscode, e2e, chromatic]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
       - name: Check selected job results
-        env:
-          RESULTS: ${{ toJSON(needs) }}
-        run: node .github/scripts/check-job-results.mjs
+        if: >-
+          needs.changes.result != 'success' || contains(needs.*.result, 'failure') ||
+          contains(needs.*.result, 'cancelled')
+        run: exit 1
