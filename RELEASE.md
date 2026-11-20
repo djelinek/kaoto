@@ -37,7 +37,7 @@ Once triggered, the orchestrator coordinates sub-workflows in parallel:
 - **NPM Package**: Builds `@kaoto/kaoto` in library mode and publishes it to the npm registry (on production release).
 - **Container Image**: Builds and pushes `quay.io/kaotoio/kaoto-app:<tag_version>` and `quay.io/kaotoio/kaoto-app:stable` (on production release).
 - **Changelog**: Automatically parses Conventional Commits and generates categorized release notes grouped by subpackages (on production release).
-- **Tag & Release**: Creates a single annotated git tag and publishes the GitHub Release.
+- **Tag & Release**: Publishes the GitHub Release, which creates its git tag on the released commit.
   - *Production releases*: includes the generated changelog, VSIX, and CycloneDX SBOM.
   - *Snapshot releases*: uses a fixed pre-release description and attaches only the VSIX.
 
