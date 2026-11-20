@@ -94,12 +94,7 @@ jobs:
           TEST_RESOURCES: ${{ runner.temp }}/kaoto-tests
           VSIX_FILE: ${{ inputs.vsix-file }}
           TEST_GROUP: ${{ matrix.group }}
-        run: |
-          # The deployment tests build their images in Minikube's Docker daemon.
-          if [ "$TEST_GROUP" = deploy ]; then
-            eval "$(minikube -p minikube docker-env)"
-          fi
-          yarn workspace @kaoto/ui-tests-vscode "test:ui:vsix:$TEST_GROUP"
+        run: yarn workspace @kaoto/ui-tests-vscode "test:ui:vsix:$TEST_GROUP"
       # Only a push to main saves, after the group passed, so an entry holds everything the group downloads. A push
       # runs the groups and operating systems of a pull request, so the nightly's Linux and macOS groups, which only
       # the nightly would read, take up no cache storage.
