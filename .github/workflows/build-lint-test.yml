@@ -28,9 +28,7 @@ jobs:
       - name: Validate PR commits
         run: yarn commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
-  # Every other job runs when a workspace it validates is affected. Yarn finds the workspaces that hold a file
-  # changed since the base commit, and `--recursive` adds every workspace that depends on them, so a new
-  # package or a new dependency between packages needs no change here.
+  # Every other job runs when a workspace it validates is affected, see .github/scripts/select-ci-jobs.mjs.
   changes:
     name: Select CI jobs
     runs-on: ubuntu-latest
@@ -48,36 +46,14 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24.x'
+      - name: Test the CI scripts
+        run: node --test .github/scripts/*.test.mjs
       - name: Select affected workspaces
         id: select
         env:
           # The upstream base commit of a PR, or the commit before a push. A manual run has none.
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          # Yarn ignores files outside the workspaces, such as yarn.lock, root configs and workflows, so a change
-          # to one of them that isn't documentation selects every workspace. So does a run with nothing to
-          # compare (a manual run or the first push of a branch) and a push that rewrote history: Yarn compares
-          # with the merge base, so it can't see the changes that such a push removed.
-          if [[ "$BASE" =~ ^0*$ ]] ||
-            { [[ "$GITHUB_EVENT_NAME" == push ]] && ! git merge-base --is-ancestor "$BASE" HEAD; } ||
-            ! git diff --quiet "$BASE...HEAD" -- . ':(exclude)packages/' ':(exclude)*.md' \
-              ':(exclude)docs/' ':(exclude)_context/' ':(exclude)assets/readme/' ':(exclude).vscode/' \
-              ':(exclude).github/ISSUE_TEMPLATE/' ':(exclude).github/PULL_REQUEST_TEMPLATE/'; then
-            since=()
-          else
-            since=(--since="$BASE")
-          fi
-          # If Yarn fails, this step must fail rather than select no jobs: pipefail keeps Yarn's exit status
-          # past jq, and each list gets its own assignment because set -e ignores a failure inside echo. A
-          # workspace without a package name is listed by its path, which `--include` matches as well.
-          set -o pipefail
-          list() { yarn workspaces list "${since[@]}" "$@" --json | jq -sc 'map(select(.location != ".") | .name // .location)'; }
-          changed=$(list)
-          affected=$(list --recursive)
-          {
-            echo "changed=$changed"
-            echo "affected=$affected"
-          } | tee -a "$GITHUB_OUTPUT"
+        run: node .github/scripts/select-ci-jobs.mjs
 
   # Lint, build and test each affected workspace in a job of its own, shown as e.g. "Packages (@kaoto/forms)",
   # with the workspace's own package.json scripts. Workspaces import each other from source (the
