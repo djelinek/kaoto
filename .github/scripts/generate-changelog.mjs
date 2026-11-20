@@ -6,8 +6,12 @@
  * previous release tag and HEAD.  PRs are routed into per-package sections
  * and categorised by conventional-commit type in their PR title.
  *
- * Output is written to stdout so the calling workflow can capture it:
- *   body=$(node .github/scripts/generate-changelog.mjs)
+ * Output is written to stdout, which the release workflow writes to the file
+ * that becomes the description of the GitHub Release:
+ *   node .github/scripts/generate-changelog.mjs > release-notes.md
+ *
+ * With SNAPSHOT=true it starts with a line naming the snapshot pre-release,
+ * RELEASE_TAG.
  *
  * Requires GH_TOKEN (or GITHUB_TOKEN) to call the GitHub API.
  * Falls back to a git-log based changelog when the token is absent.
@@ -280,6 +284,10 @@ async function fetchMergedPRs(repo, token, prevTag) {
 
 const prevTag = getPreviousTag();
 console.error(`Generating changelog since tag: ${prevTag ?? '(beginning)'}`);
+
+if (env.SNAPSHOT === 'true') {
+  process.stdout.write(`Snapshot pre-release for Kaoto ${env.RELEASE_TAG}.\n\n`);
+}
 
 const token = env.GH_TOKEN ?? env.GITHUB_TOKEN;
 // GITHUB_REPOSITORY is always set in GitHub Actions (e.g. "KaotoIO/kaoto").

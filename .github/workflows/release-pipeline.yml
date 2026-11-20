@@ -144,21 +144,11 @@ jobs:
           tag_prefix: ''
 
       - name: '📋 Generate changelog'
-        id: changelog
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SNAPSHOT: ${{ inputs.snapshot }}
           RELEASE_TAG: ${{ needs.setup.outputs.release_tag }}
-        run: |
-          body=$(node .github/scripts/generate-changelog.mjs)
-          if [ "$SNAPSHOT" = "true" ]; then
-            body="Snapshot pre-release for Kaoto ${RELEASE_TAG}."$'\n\n'"${body}"
-          fi
-          {
-            echo 'changelog_body<<EOF'
-            echo "$body"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+        run: node .github/scripts/generate-changelog.mjs > "$RUNNER_TEMP/release-notes.md"
 
       - name: '📥 Download VSIX artifact'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -181,5 +171,5 @@ jobs:
           prerelease: ${{ inputs.snapshot }}
           allowUpdates: true
           artifactErrorsFailBuild: true
-          body: ${{ steps.changelog.outputs.changelog_body }}
+          bodyFile: ${{ runner.temp }}/release-notes.md
           artifacts: release-artifacts/*
