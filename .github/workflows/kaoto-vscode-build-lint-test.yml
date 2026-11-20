@@ -31,15 +31,15 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Select UI test groups
-        id: ui-test-matrix
-        uses: ./.github/actions/kaoto-vscode-ui-test-matrix
-        with:
-          full: ${{ inputs.run-full-ui-tests }}
-          all-os: ${{ inputs.full-matrix }}
-
       - name: Setup workspace
         uses: ./.github/actions/kaoto-setup-workspace
+
+      - name: Select UI test groups
+        id: ui-test-matrix
+        env:
+          FULL: ${{ inputs.run-full-ui-tests }}
+          ALL_OS: ${{ inputs.full-matrix }}
+        run: node .github/scripts/vscode-ui-test-matrix.mjs
 
       - name: Build webview and extension
         run: yarn workspace vscode-kaoto build

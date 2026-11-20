@@ -59,10 +59,10 @@ jobs:
       - name: '🧪 Select UI test groups'
         id: ui-test-matrix
         if: ${{ inputs.run_ui_tests }}
-        uses: ./.github/actions/kaoto-vscode-ui-test-matrix
-        with:
-          full: 'true'
-          all-os: 'true'
+        env:
+          FULL: 'true'
+          ALL_OS: 'true'
+        run: node .github/scripts/vscode-ui-test-matrix.mjs
 
       - name: '🔧 Build webview, build and lint extension'
         run: yarn workspace vscode-kaoto build:prod
