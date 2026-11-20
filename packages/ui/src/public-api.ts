@@ -24,3 +24,5 @@ export * from './pages/Metadata/MetadataPage';
 export * from './pages/PipeErrorHandler/PipeErrorHandlerPage';
 export * from './providers/send-message-modal.provider';
 export * from './webview/editor';
+
+// CI cache test (fork only): a change in the UI package and the VS Code extension.

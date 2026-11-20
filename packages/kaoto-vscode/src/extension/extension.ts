@@ -126,3 +126,5 @@ export async function deactivate() {
 	await telemetryService.sendShutdownEvent();
 	KaotoOutputChannel.dispose();
 }
+
+// CI cache test (fork only): a change in the UI package and the VS Code extension.
