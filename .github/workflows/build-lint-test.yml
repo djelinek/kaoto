@@ -1,4 +1,4 @@
-name: 📦 Build npm Package
+name: ✅ CI — build, lint and test
 
 on:
   push:
@@ -7,6 +7,8 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
+# A newer push cancels the run of the older one, on main too. The next run on main then also tests what the cancelled
+# one would have, see the changes job.
 concurrency:
   group: monorepo-ci-${{ github.ref }}
   cancel-in-progress: true
@@ -28,12 +30,13 @@ jobs:
       - name: Validate PR commits
         run: yarn commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
-  # Every other job runs when a workspace it validates is affected. Yarn finds the workspaces that hold a file
-  # changed since the base commit, and `--recursive` adds every workspace that depends on them, so a new
-  # package or a new dependency between packages needs no change here.
+  # Every other job runs when a workspace it validates is affected, see .github/scripts/select-ci-jobs.mjs.
   changes:
     name: Select CI jobs
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     outputs:
       # JSON arrays of workspace names: those that hold a changed file, and those plus their dependents.
       changed: ${{ steps.select.outputs.changed }}
@@ -48,36 +51,15 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24.x'
+      - name: Test the CI scripts
+        run: node --test .github/scripts/*.test.mjs
       - name: Select affected workspaces
         id: select
         env:
-          # The upstream base commit of a PR, or the commit before a push. A manual run has none.
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          # Yarn ignores files outside the workspaces, such as yarn.lock, root configs and workflows, so a change
-          # to one of them that isn't documentation selects every workspace. So does a run with nothing to
-          # compare (a manual run or the first push of a branch) and a push that rewrote history: Yarn compares
-          # with the merge base, so it can't see the changes that such a push removed.
-          if [[ "$BASE" =~ ^0*$ ]] ||
-            { [[ "$GITHUB_EVENT_NAME" == push ]] && ! git merge-base --is-ancestor "$BASE" HEAD; } ||
-            ! git diff --quiet "$BASE...HEAD" -- . ':(exclude)packages/' ':(exclude)*.md' \
-              ':(exclude)docs/' ':(exclude)_context/' ':(exclude)assets/readme/' ':(exclude).vscode/' \
-              ':(exclude).github/ISSUE_TEMPLATE/' ':(exclude).github/PULL_REQUEST_TEMPLATE/'; then
-            since=()
-          else
-            since=(--since="$BASE")
-          fi
-          # If Yarn fails, this step must fail rather than select no jobs: pipefail keeps Yarn's exit status
-          # past jq, and each list gets its own assignment because set -e ignores a failure inside echo. A
-          # workspace without a package name is listed by its path, which `--include` matches as well.
-          set -o pipefail
-          list() { yarn workspaces list "${since[@]}" "$@" --json | jq -sc 'map(select(.location != ".") | .name // .location)'; }
-          changed=$(list)
-          affected=$(list --recursive)
-          {
-            echo "changed=$changed"
-            echo "affected=$affected"
-          } | tee -a "$GITHUB_OUTPUT"
+          # The upstream base commit of a PR. A push reads its base from the earlier runs, and a manual run has none.
+          BASE: ${{ github.event.pull_request.base.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/select-ci-jobs.mjs
 
   # Lint, build and test each affected workspace in a job of its own, shown as e.g. "Packages (@kaoto/forms)",
   # with the workspace's own package.json scripts. Workspaces import each other from source (the
@@ -108,14 +90,10 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      # The tests of the VS Code extension start VS Code, which needs unprivileged user namespaces on Ubuntu and
-      # a display. The display runs until the job ends; the other workspaces need neither.
-      - name: Set up VS Code for the extension's tests
+      # The tests of the VS Code extension start VS Code; the other workspaces need no display.
+      - name: Set up a display for the extension's tests
         if: matrix.package == 'vscode-kaoto'
-        run: |
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-          Xvfb :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
-          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+        uses: ./.github/actions/kaoto-vscode-setup-display
       # After Java: setup-java keys its Maven cache on every pom.xml in the checkout, which takes about 2 s before
       # node_modules is in place and about 28 s after.
       - uses: ./.github/actions/kaoto-setup-workspace
@@ -178,7 +156,7 @@ jobs:
     name: VS Code
     needs: changes
     if: contains(fromJSON(needs.changes.outputs.affected), '@kaoto/ui-tests-vscode')
-    uses: ./.github/workflows/kaoto-vscode-build-lint-test.yml
+    uses: ./.github/workflows/kaoto-vscode.yml
     with:
       run-full-ui-tests: >-
         ${{ contains(fromJSON(needs.changes.outputs.changed), 'vscode-kaoto') ||
@@ -235,16 +213,15 @@ jobs:
               gh cache delete "$id" || echo "::warning::Could not delete $key, which GitHub may have evicted already"
             done
 
-  # Keep the existing required check name, including on documentation-only PRs.
+  # Keep the existing required check name, including on documentation-only PRs. It fails when the jobs couldn't be
+  # selected or a selected job failed or was cancelled; the jobs that weren't selected are skipped.
   build:
     needs: [commitlint, changes, packages, vscode, e2e, chromatic]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
       - name: Check selected job results
-        env:
-          RESULTS: ${{ toJSON(needs) }}
-        run: node .github/scripts/check-job-results.mjs
+        if: >-
+          needs.changes.result != 'success' || contains(needs.*.result, 'failure') ||
+          contains(needs.*.result, 'cancelled')
+        run: exit 1

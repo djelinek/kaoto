@@ -18,10 +18,10 @@ on:
         description: Run full UI + deploy tests (minikube) before packaging?
         required: false
         default: true
-    outputs:
-      vsix_name:
-        description: VSIX filename (e.g. vscode-kaoto-2.13.0.vsix)
-        value: ${{ jobs.release.outputs.vsix_name }}
+
+env:
+  # The VSIX that the release job builds and the publish job publishes
+  VSIX_NAME: vscode-kaoto-${{ inputs.release_tag }}.vsix
 
 jobs:
   release:
@@ -29,7 +29,7 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     outputs:
-      vsix_name: ${{ steps.compute.outputs.vsix_name }}
+      vsix_name: ${{ env.VSIX_NAME }}
       ui_test_matrix: ${{ steps.ui-test-matrix.outputs.matrix }}
 
     steps:
@@ -43,39 +43,25 @@ jobs:
         with:
           release-tag: ${{ inputs.release_tag }}
 
-      - name: '🔧 Setup VS Code system tools'
-        uses: ./.github/actions/kaoto-vscode-setup-tools
-        with:
-          allow-unprivileged-userns: 'true'
-
-      - name: '🔢 Compute VSIX filename'
-        id: compute
-        env:
-          RELEASE_TAG: ${{ inputs.release_tag }}
-        run: |
-          VSIX_NAME="vscode-kaoto-${RELEASE_TAG}.vsix"
-          echo "vsix_name=${VSIX_NAME}" >> "$GITHUB_OUTPUT"
+      - name: '🔧 Set up a display for VS Code'
+        uses: ./.github/actions/kaoto-vscode-setup-display
 
       - name: '🧪 Select UI test groups'
         id: ui-test-matrix
         if: ${{ inputs.run_ui_tests }}
-        uses: ./.github/actions/kaoto-vscode-ui-test-matrix
-        with:
-          full: 'true'
-          all-os: 'true'
-
-      - name: '🔧 Build UI lib'
-        run: yarn workspace @kaoto/kaoto build:lib
+        env:
+          FULL: 'true'
+          ALL_OS: 'true'
+        run: node .github/scripts/vscode-ui-test-matrix.mjs
 
       - name: '🔧 Build webview, build and lint extension'
         run: yarn workspace vscode-kaoto build:prod
 
       - name: '🧪 Run unit tests'
-        run: xvfb-run -a yarn workspace vscode-kaoto test:unit
+        run: yarn workspace vscode-kaoto test:unit
 
       - name: '📦 Build release VSIX'
         env:
-          VSIX_NAME: ${{ steps.compute.outputs.vsix_name }}
           RELEASE_TAG: ${{ inputs.release_tag }}
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}
         run: |
@@ -88,7 +74,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: vscode-kaoto-vsix-release
-          path: packages/kaoto-vscode/${{ steps.compute.outputs.vsix_name }}
+          path: packages/kaoto-vscode/${{ env.VSIX_NAME }}
           if-no-files-found: error
           retention-days: ${{ inputs.snapshot && 2 || 7 }}
 
@@ -132,13 +118,9 @@ jobs:
     needs:
       - release
       - ui-tests
-    # !cancelled() prevents publishing when the workflow is cancelled while still
-    # allowing publish to run when ui-tests was skipped (run_ui_tests=false).
-    if: |
-      !cancelled() &&
-      !inputs.snapshot &&
-      needs.release.result == 'success' &&
-      (needs.ui-tests.result == 'success' || needs.ui-tests.result == 'skipped')
+    # Also when the UI tests are skipped (run_ui_tests false), but not when a job before it failed or was cancelled.
+    if: >-
+      !cancelled() && !inputs.snapshot && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
 
     steps:
       - name: '🛰️ Checkout source code'
@@ -158,11 +140,7 @@ jobs:
           path: packages/kaoto-vscode
 
       - name: '📤 Publish to VS Code Marketplace'
-        env:
-          VSIX_NAME: ${{ needs.release.outputs.vsix_name }}
         run: yarn workspace vscode-kaoto vsce publish --oidc --packagePath "${VSIX_NAME}" --skip-duplicate
 
       - name: '📤 Publish to Open-VSX'
-        env:
-          VSIX_NAME: ${{ needs.release.outputs.vsix_name }}
         run: yarn workspace vscode-kaoto ovsx publish --trusted-publishing "${VSIX_NAME}" --skip-duplicate

@@ -1,4 +1,4 @@
-name: 🧪 VS Code Kaoto Integration Tests
+name: 🧪 VS Code — UI tests
 
 on:
   workflow_call:
@@ -13,7 +13,7 @@ on:
         type: string
         default: kaoto-ci.vsix
       matrix:
-        description: The test groups and OSes to run, and whether each group needs JBang, as the JSON matrix from the kaoto-vscode-ui-test-matrix action
+        description: The test groups and OSes to run, and whether each group needs JBang, as the JSON matrix from .github/scripts/vscode-ui-test-matrix.mjs
         required: true
         type: string
       retention-days:
@@ -26,7 +26,7 @@ permissions:
   contents: read
 
 jobs:
-  # One job per test group and OS, so a run lists only the groups that run. The kaoto-vscode-ui-test-matrix action
+  # One job per test group and OS, so a run lists only the groups that run. .github/scripts/vscode-ui-test-matrix.mjs
   # builds the matrix from the `ciTestGroups` field in the package.json of @kaoto/ui-tests-vscode, which lists every
   # group, the smoke groups, the Linux-only ones and the ones that need no JBang (see that package's README).
   ui-tests:
@@ -44,10 +44,11 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/kaoto-setup-workspace
-      - uses: ./.github/actions/kaoto-vscode-setup-tools
-        with:
-          install-jbang: ${{ matrix.jbang }}
-          allow-unprivileged-userns: 'true'
+      - name: Set up Java and JBang
+        if: matrix.jbang
+        uses: ./.github/actions/kaoto-vscode-setup-jbang
+      - name: Set up a display for VS Code
+        uses: ./.github/actions/kaoto-vscode-setup-display
       # Through Camel JBang the extension downloads Camel, its plugins and the dependencies of the test projects into
       # the local Maven repository, Citrus does the same, and JBang compiles the scripts it runs into its cache. Each
       # group caches both for its OS under a key made of the Camel catalog package, whose catalogs decide the Camel
@@ -86,10 +87,6 @@ jobs:
         with:
           name: ${{ inputs.vsix-artifact-name }}
           path: packages/ui-tests-vscode
-      - name: Set display resolution
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: Set-DisplayResolution -Width 1920 -Height 1080 -Force
       - name: Run ${{ matrix.group }} tests
         shell: bash
         env:
@@ -97,16 +94,7 @@ jobs:
           TEST_RESOURCES: ${{ runner.temp }}/kaoto-tests
           VSIX_FILE: ${{ inputs.vsix-file }}
           TEST_GROUP: ${{ matrix.group }}
-        run: |
-          # The deployment tests build their images in Minikube's Docker daemon.
-          if [ "$TEST_GROUP" = deploy ]; then
-            eval "$(minikube -p minikube docker-env)"
-          fi
-          if [ "$RUNNER_OS" = Linux ]; then
-            xvfb-run -a yarn workspace @kaoto/ui-tests-vscode "test:ui:vsix:$TEST_GROUP"
-          else
-            yarn workspace @kaoto/ui-tests-vscode "test:ui:vsix:$TEST_GROUP"
-          fi
+        run: yarn workspace @kaoto/ui-tests-vscode "test:ui:vsix:$TEST_GROUP"
       # Only a push to main saves, after the group passed, so an entry holds everything the group downloads. A push
       # runs the groups and operating systems of a pull request, so the nightly's Linux and macOS groups, which only
       # the nightly would read, take up no cache storage.

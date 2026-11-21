@@ -32,12 +32,6 @@ jobs:
       - name: '🔧 Build @kaoto/forms package'
         run: yarn workspace @kaoto/forms run build
 
-      - name: '📤 Version and publish'
-        env:
-          RELEASE_TAG: ${{ inputs.release_tag }}
-        run: |
-          if npm view "@kaoto/forms@${RELEASE_TAG}" version > /dev/null 2>&1; then
-            echo "Version ${RELEASE_TAG} already published on NPM, skipping."
-          else
-            yarn workspace @kaoto/forms npm publish --access public
-          fi
+      # Yarn skips a version that the registry already has, as when a release runs again.
+      - name: '📤 Publish to npm'
+        run: yarn workspace @kaoto/forms npm publish --access public --tolerate-republish

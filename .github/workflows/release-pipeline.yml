@@ -107,15 +107,9 @@ jobs:
       - call-release-forms
       - call-release-ui
       - call-release-container
-    # !cancelled() prevents tagging and releasing when the workflow is cancelled while still
-    # allowing tag-and-release to run when Forms, UI or Container jobs are skipped on snapshot runs.
-    if: |
-      !cancelled() &&
-      needs.setup.result == 'success' &&
-      needs.call-release-vscode.result == 'success' &&
-      (needs.call-release-forms.result == 'success' || needs.call-release-forms.result == 'skipped') &&
-      (needs.call-release-ui.result == 'success' || needs.call-release-ui.result == 'skipped') &&
-      (needs.call-release-container.result == 'success' || needs.call-release-container.result == 'skipped')
+    # Also when the Forms, UI and container jobs are skipped, as in a snapshot release, but not when a job before it
+    # failed or was cancelled.
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
 
     steps:
       - name: '🛰️ Checkout source code'
@@ -128,44 +122,13 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24.x'
-          cache: 'yarn'
-
-      - name: '🔍 Check if git tag already exists'
-        id: check_tag
-        env:
-          RELEASE_TAG: ${{ needs.setup.outputs.release_tag }}
-        run: |
-          if git ls-remote --tags origin "refs/tags/${RELEASE_TAG}" | grep -q .; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: '🏷️ Create and push git tag'
-        if: ${{ steps.check_tag.outputs.exists == 'false' }}
-        uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b # v6.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{ needs.setup.outputs.release_tag }}
-          create_annotated_tag: true
-          tag_prefix: ''
 
       - name: '📋 Generate changelog'
-        id: changelog
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SNAPSHOT: ${{ inputs.snapshot }}
           RELEASE_TAG: ${{ needs.setup.outputs.release_tag }}
-        run: |
-          body=$(node .github/scripts/generate-changelog.mjs)
-          if [ "$SNAPSHOT" = "true" ]; then
-            body="Snapshot pre-release for Kaoto ${RELEASE_TAG}."$'\n\n'"${body}"
-          fi
-          {
-            echo 'changelog_body<<EOF'
-            echo "$body"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+        run: node .github/scripts/generate-changelog.mjs > "$RUNNER_TEMP/release-notes.md"
 
       - name: '📥 Download VSIX artifact'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -180,13 +143,16 @@ jobs:
           name: vscode-kaoto-sbom
           path: release-artifacts
 
+      # Creating the release also creates its tag on the released commit. A release that runs again updates the
+      # release and leaves an existing tag where it is.
       - name: '🚀 Create or update GitHub Release'
         uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
         with:
           tag: ${{ needs.setup.outputs.release_tag }}
+          commit: ${{ github.sha }}
           name: Release ${{ needs.setup.outputs.release_tag }}
           prerelease: ${{ inputs.snapshot }}
           allowUpdates: true
           artifactErrorsFailBuild: true
-          body: ${{ steps.changelog.outputs.changelog_body }}
+          bodyFile: ${{ runner.temp }}/release-notes.md
           artifacts: release-artifacts/*

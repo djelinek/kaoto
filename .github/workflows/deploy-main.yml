@@ -28,18 +28,12 @@ jobs:
       - name: '🔧 Build web application'
         run: yarn workspace @kaoto/kaoto build
 
-      - name: '🔧 Tar UI Dist'
-        shell: bash
-        run: |
-          tar -czf ${{ runner.temp }}/kaoto-ui.tgz -C packages/ui/dist .
-          ls -lh ${{ runner.temp }}/kaoto-ui.tgz
-
-      - name: '🔧 Persist UI Dist'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      # The github-pages artifact holds the build as artifact.tar: deploy-pages publishes it, and deploy-images unpacks
+      # it for the container image.
+      - name: '📤 Upload artifact @kaoto/kaoto web application'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          name: 'kaoto-ui-${{ github.run_id }}'
-          path: '${{ runner.temp }}/kaoto-ui.tgz'
-          retention-days: 1
+          path: 'packages/ui/dist'
 
   deploy-pages:
     permissions:
@@ -50,30 +44,8 @@ jobs:
     needs:
       - build-distribution
     steps:
-      - name: '🛰️ Checkout source code'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
       - name: '🛰️ Setup Pages'
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-
-      - name: '🛰️ Download UI Dist'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: kaoto-ui-${{ github.run_id }}
-          path: '${{ runner.temp }}'
-
-      - name: '🛰️ Extract UI Dist'
-        shell: bash
-        run: |
-          mkdir -p packages/ui/dist
-          tar -xzf "${{ runner.temp }}/kaoto-ui.tgz" -C packages/ui/dist
-
-      - name: '📤 Upload artifact @kaoto/kaoto web application'
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: 'packages/ui/dist'
 
       - name: '🚀 Deploy to GitHub Pages'
         id: deployment
@@ -95,14 +67,14 @@ jobs:
       - name: '🛰️ Download UI Dist'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: kaoto-ui-${{ github.run_id }}
+          name: github-pages
           path: '${{ runner.temp }}'
 
       - name: '🛰️ Extract UI Dist'
         shell: bash
         run: |
           mkdir -p packages/ui/dist
-          tar -xzf "${{ runner.temp }}/kaoto-ui.tgz" -C packages/ui/dist
+          tar -xf "${RUNNER_TEMP}/artifact.tar" -C packages/ui/dist
 
       - name: '🛰️ Login to Container Registry'
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
